@@ -1,25 +1,22 @@
-import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, shadows } from '../../lib/theme';
 
 interface GlassCardProps {
   children: ReactNode;
   style?: ViewStyle;
   delay?: number;
-  intensity?: number;
+  elevated?: boolean;
 }
 
-export function GlassCard({ children, style, delay = 0, intensity = 40 }: GlassCardProps) {
+export function GlassCard({ children, style, delay = 0, elevated = true }: GlassCardProps) {
   return (
     <Animated.View
       entering={FadeInDown.delay(delay).springify().damping(18)}
-      style={[styles.wrapper, style]}
+      style={[styles.wrapper, elevated && shadows.card, style]}
     >
-      <BlurView intensity={intensity} tint="dark" style={styles.blur}>
-        <View style={styles.inner}>{children}</View>
-      </BlurView>
+      <View style={styles.inner}>{children}</View>
     </Animated.View>
   );
 }
@@ -30,9 +27,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.cardBorder,
-  },
-  blur: {
-    overflow: 'hidden',
+    backgroundColor: colors.card,
   },
   inner: {
     backgroundColor: colors.card,

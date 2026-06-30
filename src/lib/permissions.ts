@@ -6,5 +6,5 @@ export function canManageTournament(
 ): boolean {
   if (!tournament || !profile) return false;
   if (profile.role === 'admin') return true;
-  return tournament.organizer_id === profile.id;
+  return String(tournament.organizer_id) === String(profile.id);
 }

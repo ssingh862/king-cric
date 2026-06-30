@@ -1,26 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../src/components/ui/GlassCard';
 import { GradientButton } from '../src/components/ui/GradientButton';
 import { useMyTeams } from '../src/hooks/useTournaments';
+import { isApiConfigured } from '../src/lib/api';
 import { colors, radius } from '../src/lib/theme';
 import { useAuthStore } from '../src/stores/authStore';
-
-const isSupabaseConfigured = () =>
-  Boolean(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function MyTeamsScreen() {
   const { profile } = useAuthStore();
   const { data: teams, isLoading } = useMyTeams(profile?.id);
 
-  const configured = isSupabaseConfigured();
+  const configured = isApiConfigured();
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#1A0A2E', '#0A0612']} style={styles.header} />
       <SafeAreaView style={styles.flex} edges={['top']}>
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()} hitSlop={12}>

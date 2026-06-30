@@ -8,7 +8,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, shadows } from '../../lib/theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -70,7 +70,7 @@ export function GradientButton({
         colors={[colors.orange, colors.pink]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.gradient}
+        style={[styles.gradient, shadows.button]}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />

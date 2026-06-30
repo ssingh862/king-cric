@@ -56,6 +56,27 @@ export function computeOnCreaseFromEvents(
   };
 }
 
+/** Move sole surviving batter to striker when batting alone (small squads). */
+export function consolidateLoneBatter(crease: {
+  strikerId: string | null;
+  nonStrikerId: string | null;
+}): { strikerId: string | null; nonStrikerId: string | null } {
+  if (crease.strikerId && crease.nonStrikerId) return crease;
+  if (!crease.strikerId && crease.nonStrikerId) {
+    return { strikerId: crease.nonStrikerId, nonStrikerId: null };
+  }
+  return { strikerId: crease.strikerId, nonStrikerId: null };
+}
+
+export function countRemainingBatters(
+  squadSize: number,
+  totalWickets: number,
+  crease: { strikerId: string | null; nonStrikerId: string | null }
+): number {
+  const onCrease = [crease.strikerId, crease.nonStrikerId].filter(Boolean).length;
+  return Math.max(0, squadSize - totalWickets - onCrease);
+}
+
 /** Which crease position needs a new batter after a wicket. */
 export function vacantCreaseSlot(crease: {
   strikerId: string | null;

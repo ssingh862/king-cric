@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Player } from '../../types/database';
 import type { WicketTypeInput } from '../../lib/cricket/types';
@@ -95,20 +94,20 @@ export function WicketPickerModal({
     >
       <View style={styles.overlay}>
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <LinearGradient colors={['#4a0e1a', '#1a0810']} style={styles.headerGrad}>
+          <View style={[styles.headerGrad, { backgroundColor: colors.liveLight }]}>
             <View style={styles.headerRow}>
               <View style={styles.headerIcon}>
-                <Ionicons name="close-circle" size={28} color="#fff" />
+                <Ionicons name="close-circle" size={28} color={colors.live} />
               </View>
               <View style={styles.headerText}>
                 <Text style={styles.title}>Wicket</Text>
                 <Text style={styles.subtitle}>How did the batter get out?</Text>
               </View>
               <Pressable onPress={handleClose} hitSlop={12} style={styles.closeBtn}>
-                <Ionicons name="close-circle" size={32} color="rgba(255,255,255,0.7)" />
+                <Ionicons name="close-circle" size={32} color={colors.textMuted} />
               </Pressable>
             </View>
-          </LinearGradient>
+          </View>
 
           <ScrollView
             style={styles.scroll}
@@ -194,7 +193,7 @@ export function WicketPickerModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -217,8 +216,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: { flex: 1 },
-  title: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  subtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 14, marginTop: 2 },
+  title: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  subtitle: { color: colors.textMuted, fontSize: 14, marginTop: 2 },
   closeBtn: { padding: 4 },
   scroll: { maxHeight: 400 },
   scrollContent: { padding: 16 },
@@ -241,7 +240,7 @@ const styles = StyleSheet.create({
   },
   gridItemOn: {
     borderColor: colors.orange,
-    backgroundColor: 'rgba(255,107,0,0.15)',
+    backgroundColor: colors.orangeLight,
   },
   gridLabel: { color: colors.text, fontWeight: '700', fontSize: 14 },
   gridLabelOn: { color: colors.orange },
@@ -263,7 +262,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     alignItems: 'center',
   },
-  whoChipOn: { borderColor: colors.orange, backgroundColor: 'rgba(255,107,0,0.15)' },
+  whoChipOn: { borderColor: colors.orange, backgroundColor: colors.orangeLight },
   whoName: { color: colors.text, fontWeight: '600', fontSize: 15 },
   whoNameOn: { color: colors.orange, fontWeight: '800' },
   footer: {

@@ -16,8 +16,8 @@ import {
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientButton } from '../../src/components/ui/GradientButton';
-import { colors, radius } from '../../src/lib/theme';
-import { isSupabaseConfigured } from '../../src/lib/supabase';
+import { colors, radius, shadows } from '../../src/lib/theme';
+import { isApiConfigured } from '../../src/lib/api';
 import { useAuthStore } from '../../src/stores/authStore';
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
@@ -116,14 +116,8 @@ export default function LoginScreen() {
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={['#1A0A2E', '#0A0612', '#0A0612']}
+        colors={['#FFF7ED', '#F8FAFC', '#FFFFFF']}
         style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['rgba(255,107,0,0.25)', 'transparent']}
-        style={styles.glowTop}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
       />
 
       <SafeAreaView style={styles.safe}>
@@ -146,11 +140,11 @@ export default function LoginScreen() {
               <Text style={styles.tagline}>Local tournaments. Live scores. One platform.</Text>
             </Animated.View>
 
-            {!isSupabaseConfigured() && (
+            {!isApiConfigured() && (
               <View style={styles.configWarning}>
                 <Ionicons name="warning-outline" size={18} color={colors.gold} />
                 <Text style={styles.configWarningText}>
-                  Add Supabase URL and anon key to .env, then restart with: npx expo start -c
+                  Add EXPO_PUBLIC_API_URL to .env, then restart with: npx expo start -c
                 </Text>
               </View>
             )}
@@ -293,8 +287,9 @@ const styles = StyleSheet.create({
   logoRing: {
     padding: 3,
     borderRadius: 50,
-    backgroundColor: 'rgba(255,107,0,0.3)',
+    backgroundColor: colors.orangeLight,
     marginBottom: 16,
+    ...shadows.card,
   },
   logoInner: {
     width: 72,
@@ -316,18 +311,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: colors.card,
     borderRadius: radius.xl,
     padding: 24,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    ...shadows.cardLg,
   },
   modeTabs: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: 4,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   modeTab: {
     flex: 1,
@@ -336,7 +334,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   modeTabActive: {
-    backgroundColor: 'rgba(255,107,0,0.25)',
+    backgroundColor: colors.card,
+    ...shadows.card,
   },
   modeTabText: {
     color: colors.textDim,
@@ -351,13 +350,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,107,0,0.15)',
+    backgroundColor: colors.orangeLight,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.sm,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.orange,
+    borderColor: 'rgba(234, 88, 12, 0.25)',
   },
   emailBadgeText: { color: colors.orange, fontSize: 12, fontWeight: '700' },
   cardTitle: { color: colors.text, fontSize: 22, fontWeight: '700' },
@@ -365,7 +364,7 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: colors.inputBg,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -395,12 +394,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: 'rgba(255,215,0,0.12)',
+    backgroundColor: colors.warningLight,
     borderRadius: radius.md,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.35)',
+    borderColor: '#FDE68A',
   },
   configWarningText: {
     flex: 1,

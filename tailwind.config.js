@@ -6,15 +6,15 @@ module.exports = {
     extend: {
       colors: {
         cricket: {
-          bg: '#0A0612',
-          card: 'rgba(255,255,255,0.06)',
-          border: 'rgba(255,255,255,0.12)',
-          orange: '#FF6B00',
-          gold: '#FFD700',
-          purple: '#7B2CBF',
-          pink: '#E91E8C',
-          green: '#00C853',
-          blue: '#00B4D8',
+          bg: '#F8FAFC',
+          card: '#FFFFFF',
+          border: '#E2E8F0',
+          orange: '#EA580C',
+          gold: '#B45309',
+          purple: '#7C3AED',
+          pink: '#DB2777',
+          green: '#059669',
+          blue: '#0284C7',
         },
       },
       fontFamily: {

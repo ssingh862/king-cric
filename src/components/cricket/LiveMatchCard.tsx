@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { LiveBadge } from '../ui/LiveBadge';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, shadows } from '../../lib/theme';
 
 interface TeamInfo {
   id: string;
@@ -32,21 +31,21 @@ export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
   return (
     <Animated.View entering={FadeInRight.delay(index * 80).springify()}>
       <Pressable onPress={() => router.push(`/match/${match.id}`)}>
-        <LinearGradient
-          colors={['rgba(255,107,0,0.15)', 'rgba(123,44,191,0.1)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.card}
-        >
+        <View style={[styles.card, shadows.card]}>
           <View style={styles.header}>
             <Text style={styles.tournament} numberOfLines={1}>
               {match.tournament?.name ?? 'Tournament'}
             </Text>
             {match.status === 'live' && <LiveBadge />}
+            {match.status === 'scheduled' && (
+              <View style={styles.scheduledBadge}>
+                <Text style={styles.scheduledText}>Upcoming</Text>
+              </View>
+            )}
             {match.status === 'completed' && (
               <View style={styles.completedBadge}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.gold} />
-                <Text style={styles.completedText}>Completed</Text>
+                <Ionicons name="checkmark-circle" size={14} color={colors.green} />
+                <Text style={styles.completedText}>Done</Text>
               </View>
             )}
           </View>
@@ -68,14 +67,14 @@ export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
               {match.result_summary}
             </Text>
           ) : match.status === 'completed' ? (
-            <Text style={styles.summary}>Tap to view result</Text>
+            <Text style={styles.hint}>Tap to view result</Text>
           ) : (
             <View style={styles.footer}>
               <Ionicons name="play-circle" size={16} color={colors.orange} />
-              <Text style={styles.tapHint}>Tap for live score</Text>
+              <Text style={styles.tapHint}>Tap for score</Text>
             </View>
           )}
-        </LinearGradient>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -88,6 +87,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
   },
   header: {
     flexDirection: 'row',
@@ -100,20 +100,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     marginRight: 8,
+    fontWeight: '600',
+  },
+  scheduledBadge: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  scheduledText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   completedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255,215,0,0.12)',
+    backgroundColor: colors.successLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.35)',
+    borderColor: '#A7F3D0',
   },
   completedText: {
-    color: colors.gold,
+    color: colors.green,
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -129,19 +144,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  teamColRight: {
-    justifyContent: 'flex-end',
-  },
-  teamDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  teamName: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-  },
+  teamColRight: { justifyContent: 'flex-end' },
+  teamDot: { width: 10, height: 10, borderRadius: 5 },
+  teamName: { color: colors.text, fontSize: 17, fontWeight: '800' },
   vs: {
     color: colors.textDim,
     fontSize: 12,
@@ -149,20 +154,22 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   summary: {
-    color: colors.gold,
+    color: colors.textMuted,
     fontSize: 13,
     marginTop: 12,
     textAlign: 'center',
+    fontWeight: '500',
   },
+  hint: { color: colors.textDim, fontSize: 13, marginTop: 12, textAlign: 'center' },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
   },
-  tapHint: {
-    color: colors.orange,
-    fontSize: 13,
-  },
+  tapHint: { color: colors.orange, fontSize: 13, fontWeight: '600' },
 });

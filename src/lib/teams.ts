@@ -1,5 +1,5 @@
 import { insertPlayers, type PlayerInput } from './players';
-import { supabase } from './supabase';
+import { apiSafe } from './api';
 
 export interface RegisterTeamInput {
   tournamentId: string;
@@ -16,66 +16,23 @@ export async function registerTeam({
   captainId,
   players = [],
 }: RegisterTeamInput) {
-  const name = teamName.trim();
-  const short = (shortName?.trim() || name.slice(0, 3)).toUpperCase().slice(0, 4);
-
-  const captainPlayer = players.find((p) => p.isCaptain);
-
-  const { data: team, error: teamError } = await supabase
-    .from('teams')
-    .insert({
+  const { data, error } = await apiSafe<{ id: string }>('/teams/register', {
+    method: 'POST',
+    body: JSON.stringify({
       tournament_id: tournamentId,
+      team_name: teamName.trim(),
+      short_name: shortName,
       captain_id: captainId,
-      name,
-      short_name: short,
-      is_approved: true,
-    })
-    .select('id')
-    .single();
-
-  if (teamError) {
-    if (teamError.code === '23505') {
-      return { error: 'A team with this name already exists in this tournament.' };
-    }
-    return { error: teamError.message };
-  }
-
-  const { error: regError } = await supabase.from('tournament_registrations').insert({
-    tournament_id: tournamentId,
-    team_id: team.id,
-    registered_by: captainId,
-    status: 'approved',
+      players,
+    }),
   });
 
-  if (regError) {
-    await supabase.from('teams').delete().eq('id', team.id);
-    return { error: regError.message };
+  if (error?.includes('already exists')) {
+    return { error: 'A team with this name already exists in this tournament.' };
   }
+  if (error) return { error };
 
-  const { error: playersError } = await insertPlayers(team.id, players);
-  if (playersError) {
-    return { error: playersError };
-  }
-
-  await supabase
-    .from('players')
-    .update({ profile_id: captainId })
-    .eq('team_id', team.id)
-    .eq('is_captain', true);
-
-  if (captainPlayer) {
-    const { data: cap } = await supabase
-      .from('players')
-      .select('id')
-      .eq('team_id', team.id)
-      .eq('is_captain', true)
-      .maybeSingle();
-    if (cap?.id) {
-      await supabase.from('teams').update({ captain_id: captainId }).eq('id', team.id);
-    }
-  }
-
-  return { teamId: team.id, error: null };
+  return { teamId: data?.id, error: null };
 }
 
 export interface UpdateTeamInput {
@@ -91,14 +48,13 @@ export async function updateTeam({
   shortName,
   primaryColor,
 }: UpdateTeamInput) {
-  const { error } = await supabase
-    .from('teams')
-    .update({
+  const { error } = await apiSafe(`/teams/${teamId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
       name: name.trim(),
       short_name: (shortName?.trim() || name.slice(0, 3)).toUpperCase().slice(0, 4),
       ...(primaryColor ? { primary_color: primaryColor } : {}),
-    })
-    .eq('id', teamId);
-
-  return { error: error?.message ?? null };
+    }),
+  });
+  return { error };
 }

@@ -26,6 +26,8 @@ export interface MatchRules {
   noBallPenaltyRuns: number;
   freeHitOnNoBall: boolean;
   superOverOvers: number;
+  /** Batting squad size — drives all-out wicket cap. */
+  battingSquadSize?: number;
 }
 
 export interface BallInput {

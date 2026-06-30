@@ -13,13 +13,13 @@ import {
   type InningsState,
 } from '../lib/cricket';
 import { rulesForFormat } from '../lib/cricket/formats';
-import { maxLegalBalls } from '../lib/cricket/rules';
+import { maxLegalBalls, maxWicketsForSquad } from '../lib/cricket/rules';
+import { vacantCreaseSlot, consolidateLoneBatter, countRemainingBatters } from '../lib/inningsPlayers';
 import { canDismissOnFreeHit, normalizeWicketType } from '../lib/cricket/rules';
 import type { MatchRules } from '../lib/cricket/types';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import { computeOnCreaseFromEvents } from '../lib/inningsPlayers';
 import { syncInningsToDb } from '../lib/inningsSync';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { api, apiSafe, isApiConfigured } from '../lib/api';
+import { getSocket, joinInningsRoom, leaveInningsRoom } from '../lib/socket';
 
 export type RecordBallFollowUp = 'new_batsman' | 'new_bowler' | 'innings_complete';
 
@@ -30,15 +30,20 @@ export interface RecordBallResult {
   inningsCompleteReason?: 'all_out' | 'overs_complete' | 'target_reached';
 }
 
-let activeChannel: RealtimeChannel | null = null;
 let activeInningsId: string | null = null;
 let realtimeRefCount = 0;
+let scoreEventHandler: ((payload: { type: string; data: ScoreEvent }) => void) | null = null;
+let inningsUpdateHandler: ((inn: Innings) => void) | null = null;
 
 function teardownRealtime() {
-  if (activeChannel) {
-    void supabase.removeChannel(activeChannel);
-    activeChannel = null;
+  if (activeInningsId) {
+    leaveInningsRoom(activeInningsId);
+    const socket = getSocket();
+    if (socket && scoreEventHandler) socket.off('score_event', scoreEventHandler);
+    if (socket && inningsUpdateHandler) socket.off('innings_updated', inningsUpdateHandler);
     activeInningsId = null;
+    scoreEventHandler = null;
+    inningsUpdateHandler = null;
   }
   realtimeRefCount = 0;
 }
@@ -145,16 +150,16 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
     const unique = dedupeScoreEvents(events);
     const last = unique[unique.length - 1];
 
-    if (isSupabaseConfigured() && !last.id.startsWith('demo-')) {
-      const { error } = await supabase.from('score_events').delete().eq('id', last.id);
-      if (error) return { error: error.message };
+    if (isApiConfigured() && !last.id.startsWith('demo-')) {
+      const { error } = await apiSafe(`/matches/score-events/${last.id}`, { method: 'DELETE' });
+      if (error) return { error };
     }
 
     const remaining = unique.filter((e) => e.id !== last.id);
     const crease = applyCreaseFromEvents(innings, remaining, matchRules);
     const snap = replayInnings(innings, remaining, matchRules);
 
-    if (isSupabaseConfigured()) {
+    if (isApiConfigured()) {
       await syncInningsToDb(innings, remaining, matchRules);
     }
 
@@ -177,21 +182,17 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
   },
 
   loadEvents: async (inningsId) => {
-    if (!isSupabaseConfigured()) return;
-    const { data } = await supabase
-      .from('score_events')
-      .select('*')
-      .eq('innings_id', inningsId)
-      .order('created_at', { ascending: true });
+    if (!isApiConfigured()) return;
+    const data = await api<ScoreEvent[]>(`/matches/innings/${inningsId}/score-events`);
     const events = dedupeScoreEvents(data ?? []);
     const { innings, matchRules } = get();
     set({ events, ...applyCreaseFromEvents(innings, events, matchRules) });
   },
 
   subscribeRealtime: (inningsId) => {
-    if (!isSupabaseConfigured()) return () => {};
+    if (!isApiConfigured()) return () => {};
 
-    if (activeInningsId === inningsId && activeChannel) {
+    if (activeInningsId === inningsId) {
       realtimeRefCount += 1;
       return () => {
         realtimeRefCount -= 1;
@@ -200,74 +201,50 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
     }
 
     teardownRealtime();
-
-    const channelName = `innings:${inningsId}`;
     activeInningsId = inningsId;
     realtimeRefCount = 1;
 
-    activeChannel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'score_events',
-          filter: `innings_id=eq.${inningsId}`,
+    const socket = getSocket();
+    if (!socket) return () => {};
+
+    scoreEventHandler = (payload: { type: string; data: ScoreEvent }) => {
+      if (payload.type === 'INSERT') {
+        const event = payload.data;
+        set((s) => {
+          if (s.events.some((e) => e.id === event.id)) return s;
+          const merged = mergeScoreEvents(s.events, [event]);
+          const crease = applyCreaseFromEvents(s.innings, merged, s.matchRules);
+          return {
+            events: merged,
+            strikerId: crease.strikerId ?? s.strikerId,
+            nonStrikerId: crease.nonStrikerId ?? s.nonStrikerId,
+            bowlerId: crease.bowlerId ?? s.bowlerId,
+            freeHitActive: crease.freeHitActive,
+          };
+        });
+      } else if (payload.type === 'DELETE') {
+        const removed = payload.data;
+        set((s) => {
+          const merged = s.events.filter((e) => e.id !== removed.id);
+          return { events: merged, ...applyCreaseFromEvents(s.innings, merged, s.matchRules) };
+        });
+      }
+    };
+
+    inningsUpdateHandler = (inn: Innings) => {
+      set((s) => ({
+        innings: {
+          ...inn,
+          striker_player_id: s.strikerId ?? inn.striker_player_id,
+          non_striker_player_id: s.nonStrikerId ?? inn.non_striker_player_id,
+          current_bowler_id: s.bowlerId ?? inn.current_bowler_id,
         },
-        (payload) => {
-          const event = payload.new as ScoreEvent;
-          set((s) => {
-            if (s.events.some((e) => e.id === event.id)) return s;
-            const merged = mergeScoreEvents(s.events, [event]);
-            const crease = applyCreaseFromEvents(s.innings, merged, s.matchRules);
-            return {
-              events: merged,
-              strikerId: crease.strikerId ?? s.strikerId,
-              nonStrikerId: crease.nonStrikerId ?? s.nonStrikerId,
-              bowlerId: crease.bowlerId ?? s.bowlerId,
-              freeHitActive: crease.freeHitActive,
-            };
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'score_events',
-          filter: `innings_id=eq.${inningsId}`,
-        },
-        (payload) => {
-          const removed = payload.old as ScoreEvent;
-          set((s) => {
-            const merged = s.events.filter((e) => e.id !== removed.id);
-            return { events: merged, ...applyCreaseFromEvents(s.innings, merged, s.matchRules) };
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'innings',
-          filter: `id=eq.${inningsId}`,
-        },
-        (payload) => {
-          const inn = payload.new as Innings;
-          set((s) => ({
-            innings: {
-              ...inn,
-              striker_player_id: s.strikerId ?? inn.striker_player_id,
-              non_striker_player_id: s.nonStrikerId ?? inn.non_striker_player_id,
-              current_bowler_id: s.bowlerId ?? inn.current_bowler_id,
-            },
-          }));
-        }
-      )
-      .subscribe();
+      }));
+    };
+
+    socket.on('score_event', scoreEventHandler);
+    socket.on('innings_updated', inningsUpdateHandler);
+    joinInningsRoom(inningsId);
 
     return () => {
       realtimeRefCount -= 1;
@@ -296,8 +273,11 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       freeHitActive,
     } = get();
     if (!innings) return { error: 'No innings — start match setup first' };
-    if (!strikerId || !nonStrikerId || !bowlerId) {
-      return { error: 'Select striker, non-striker and bowler first' };
+    if (!strikerId || !bowlerId) {
+      return { error: 'Select striker and bowler first' };
+    }
+    if (!nonStrikerId && !events.length) {
+      return { error: 'Select non-striker before the first ball' };
     }
 
     const isWicket = input.isWicket ?? input.ballType === 'wicket';
@@ -335,20 +315,24 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       bowlerId,
     }, matchRules);
 
-    const crease = applyPostBallCrease(
-      strikerId,
-      nonStrikerId,
-      {
-        ballType: input.ballType,
-        runsOffBat,
-        extras,
-        isWicket,
-        dismissedPlayerId: ballInput.dismissedPlayerId,
-      },
-      payload.ball_in_over,
-      legal,
-      matchRules.ballsPerOver
+    const crease = consolidateLoneBatter(
+      applyPostBallCrease(
+        strikerId,
+        nonStrikerId,
+        {
+          ballType: input.ballType,
+          runsOffBat,
+          extras,
+          isWicket,
+          dismissedPlayerId: ballInput.dismissedPlayerId,
+        },
+        payload.ball_in_over,
+        legal,
+        matchRules.ballsPerOver
+      )
     );
+
+    const endOfOver = isLegalDelivery(input.ballType) && payload.ball_in_over === matchRules.ballsPerOver;
 
     const nextFreeHit =
       input.ballType === 'no_ball' && matchRules.freeHitOnNoBall
@@ -357,7 +341,7 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
           ? false
           : freeHitActive;
 
-    if (!isSupabaseConfigured()) {
+    if (!isApiConfigured()) {
       const demoEvent: ScoreEvent = {
         id: `demo-${Date.now()}`,
         innings_id: innings.id,
@@ -377,19 +361,21 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
         nonStrikerId: crease.nonStrikerId,
         freeHitActive: snap.freeHitNext,
       });
-      return followUpAfterBall(isWicket, crease.endOfOver, snap, matchRules);
+      return followUpAfterBall(isWicket, endOfOver, snap, matchRules, crease);
     }
 
-    const { data, error } = await supabase
-      .from('score_events')
-      .insert({ innings_id: innings.id, ...payload })
-      .select()
-      .single();
+    const { data, error } = await apiSafe<ScoreEvent>(
+      `/matches/innings/${innings.id}/score-events`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
 
-    if (error) return { error: error.message };
+    if (error) return { error };
 
     const newEvents = data
-      ? mergeScoreEvents(get().events, [data as ScoreEvent])
+      ? mergeScoreEvents(get().events, [data])
       : get().events;
 
     const snap = replayInnings(innings, newEvents, matchRules);
@@ -404,7 +390,7 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
 
     await get().syncPlayersToDb();
 
-    return followUpAfterBall(isWicket, crease.endOfOver, snap, matchRules);
+    return followUpAfterBall(isWicket, endOfOver, snap, matchRules, crease);
   },
 }));
 
@@ -412,7 +398,8 @@ function followUpAfterBall(
   isWicket: boolean,
   endOfOver: boolean,
   snap: ReturnType<typeof replayInnings>,
-  rules: MatchRules
+  rules: MatchRules,
+  crease: { strikerId: string | null; nonStrikerId: string | null }
 ): RecordBallResult {
   if (snap.isInningsComplete || snap.totalWickets >= rules.maxWickets) {
     return {
@@ -422,6 +409,19 @@ function followUpAfterBall(
     };
   }
   if (isWicket) {
+    const vacant = vacantCreaseSlot(crease);
+    if (!vacant) {
+      if (endOfOver) return { error: null, followUp: 'new_bowler' };
+      return { error: null };
+    }
+    const squadSize = rules.battingSquadSize;
+    if (squadSize) {
+      const remaining = countRemainingBatters(squadSize, snap.totalWickets, crease);
+      if (remaining <= 0) {
+        if (endOfOver) return { error: null, followUp: 'new_bowler' };
+        return { error: null };
+      }
+    }
     return {
       error: null,
       followUp: 'new_batsman',
@@ -434,7 +434,15 @@ function followUpAfterBall(
   return { error: null };
 }
 
-/** Use tournament/match overs exactly (e.g. 8 overs = 48 balls). */
-export function initMatchRulesFromOvers(oversPerInnings: number) {
-  return rulesForFormat('custom', oversPerInnings);
+/** Use tournament/match overs; squad size sets when the innings is all out. */
+export function initMatchRulesFromOvers(oversPerInnings: number, squadSize?: number) {
+  const rules = rulesForFormat('custom', oversPerInnings);
+  if (squadSize != null && squadSize > 0) {
+    return {
+      ...rules,
+      maxWickets: maxWicketsForSquad(squadSize),
+      battingSquadSize: squadSize,
+    };
+  }
+  return rules;
 }

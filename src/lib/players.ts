@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { apiSafe } from './api';
 import type { SquadPlayerDraft } from '../components/forms/PlayerSquadEditor';
 
 export interface PlayerInput {
@@ -13,7 +13,6 @@ export async function insertPlayers(teamId: string, players: PlayerInput[]) {
   const rows = players
     .filter((p) => p.fullName.trim())
     .map((p) => ({
-      team_id: teamId,
       full_name: p.fullName.trim(),
       jersey_number: p.jerseyNumber ? parseInt(p.jerseyNumber, 10) : null,
       role: p.role ?? 'all_rounder',
@@ -23,8 +22,11 @@ export async function insertPlayers(teamId: string, players: PlayerInput[]) {
 
   if (!rows.length) return { error: null };
 
-  const { error } = await supabase.from('players').insert(rows);
-  return { error: error?.message ?? null };
+  const { error } = await apiSafe('/players/batch', {
+    method: 'POST',
+    body: JSON.stringify({ team_id: teamId, players: rows }),
+  });
+  return { error };
 }
 
 export function draftsToPlayerInput(drafts: SquadPlayerDraft[]): PlayerInput[] {
@@ -48,7 +50,6 @@ export async function upsertPlayersFromDrafts(
     if (!d.fullName.trim()) continue;
 
     const payload = {
-      team_id: teamId,
       full_name: d.fullName.trim(),
       jersey_number: d.jerseyNumber ? parseInt(d.jerseyNumber, 10) : null,
       role: d.role,
@@ -58,17 +59,23 @@ export async function upsertPlayersFromDrafts(
 
     const existingId = existingIds.get(d.key);
     if (existingId) {
-      const { error } = await supabase.from('players').update(payload).eq('id', existingId);
-      if (error) return { error: error.message };
+      const { error } = await apiSafe(`/players/${existingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      if (error) return { error };
     } else {
-      const { error } = await supabase.from('players').insert(payload);
-      if (error) return { error: error.message };
+      const { error } = await apiSafe('/players', {
+        method: 'POST',
+        body: JSON.stringify({ team_id: teamId, ...payload }),
+      });
+      if (error) return { error };
     }
   }
   return { error: null };
 }
 
 export async function deletePlayer(playerId: string) {
-  const { error } = await supabase.from('players').delete().eq('id', playerId);
-  return { error: error?.message ?? null };
+  const { error } = await apiSafe(`/players/${playerId}`, { method: 'DELETE' });
+  return { error };
 }

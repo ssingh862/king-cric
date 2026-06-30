@@ -2,7 +2,6 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 
 /** Remote push is not available in Expo Go (SDK 53+). Use a dev build for production push. */
@@ -25,10 +24,6 @@ export function usePushNotifications() {
       .then((token) => {
         if (token && token !== profile.expo_push_token) {
           updateProfile({ expo_push_token: token } as never);
-          supabase
-            .from('profiles')
-            .update({ expo_push_token: token })
-            .eq('id', profile.id);
         }
       })
       .catch(() => {

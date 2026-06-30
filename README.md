@@ -1,58 +1,43 @@
 # KingCric — Local Cricket Tournament App
 
-A modern React Native (Expo) app for local cricket tournaments with live ball-by-ball scoring, tournament management, and team registration — **100% free**, powered by **Supabase**.
+A modern React Native (Expo) app for local cricket tournaments with live ball-by-ball scoring, tournament management, and team registration — powered by **Node.js + MongoDB** (no Supabase).
 
 ![Dark IPL-inspired UI](https://img.shields.io/badge/UI-Dark%20%7C%20Glassmorphism-FF6B00)
-![Stack](https://img.shields.io/badge/Stack-Expo%20%7C%20Supabase%20%7C%20NativeWind-7B2CBF)
+![Stack](https://img.shields.io/badge/Stack-Expo%20%7C%20Node%20%7C%20MongoDB-7B2CBF)
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **Email Auth** | Sign in / sign up with email & password via Supabase Auth |
-| **Live Scores** | Real-time ball-by-ball updates via Supabase Realtime |
+| **Email Auth** | Sign in / sign up with JWT auth via Node API |
+| **Live Scores** | Real-time ball-by-ball updates via Socket.io |
 | **Scoring Engine** | Overs, strike rotation, extras, wickets |
 | **Tournaments** | Create/manage leagues, points table, NRR |
 | **Teams & Players** | Registration, squad, season stats |
 | **Free for everyone** | No plans or payments — all features included |
 | **Push Notifications** | Expo Notifications for live score alerts |
-| **Admin Panel** | Users, tournaments, payments, approvals |
 
 ## Tech Stack
 
-- **Expo SDK 56** + TypeScript + Expo Router
-- **Supabase** — PostgreSQL, Auth (Phone OTP), Realtime, Edge Functions, RLS
+- **Expo SDK 54** + TypeScript + Expo Router (React Native app)
+- **Node.js + Express** — REST API
+- **MongoDB + Mongoose** — database
+- **Socket.io** — live score updates
 - **NativeWind v4** — Tailwind CSS styling
 - **Zustand** — Auth & live scoring state
 - **TanStack React Query** — Server data caching
-- **Reanimated** — Smooth IPL-style animations
 
-## Project Structure
+## Project Structure (single repo)
 
 ```
-app/                    # Expo Router screens
-  (auth)/login.tsx      # Mobile OTP login
-  (tabs)/               # Home, Live, Tournaments, Profile
-  match/[id].tsx        # Live score detail
-  tournament/[id].tsx   # Points table & details
-  team/[id].tsx         # Squad & player stats
-  tournament/create.tsx # Create tournament (free)
-  score/[matchId].tsx   # Ball-by-ball scorer
-  admin/                # Admin panel
-src/
-  lib/scoring.ts        # Cricket scoring logic
-  stores/               # Zustand stores
-  hooks/                # React Query hooks
-  components/           # UI & cricket components
-supabase/
-  migrations/           # Full PostgreSQL schema + RLS
+app/                    # Expo Router screens (React Native)
+src/                    # App logic, hooks, components
+server/                 # Node.js API + MongoDB
+  src/
+    models/             # Mongoose schemas
+    routes/             # REST endpoints
+    services/           # Points table, innings sync
 ```
-
-## Expo Go compatibility
-
-This project uses **Expo SDK 54**, which matches the Expo Go app on the [Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent) and App Store.
-
-> SDK 56 is not yet published to app stores. If you need SDK 56, install Expo Go for Android via [expo.dev/go](https://expo.dev/go) or use a [development build](https://docs.expo.dev/develop/development-builds/introduction/).
 
 ## Quick Start
 
@@ -60,74 +45,53 @@ This project uses **Expo SDK 54**, which matches the Expo Go app on the [Play St
 
 ```bash
 npm install
+npm run server:install
 ```
 
-### 2. Configure Supabase
+### 2. Start MongoDB
 
-Copy `.env.example` to `.env`:
+Make sure MongoDB is running locally, or set `MONGODB_URI` in `server/.env`:
+
+```bash
+cp server/.env.example server/.env
+```
+
+### 3. Configure the app
 
 ```bash
 cp .env.example .env
 ```
 
-Add your Supabase URL and anon key.
+Set `EXPO_PUBLIC_API_URL` to your API (default `http://localhost:3000`).  
+On a physical device, use your computer's LAN IP, e.g. `http://192.168.1.5:3000`.
 
-### 3. Run database migrations
+### 4. Start the API server
 
 ```bash
-npx supabase init
-npx supabase db push
+npm run server
 ```
 
-Or run SQL files manually in the Supabase SQL editor:
-- `supabase/migrations/20260528000001_initial_schema.sql`
-- `supabase/migrations/20260528000002_rls_policies.sql`
-
-### 4. Enable Phone Auth in Supabase
-
-1. Dashboard → Authentication → Providers → Phone
-2. Configure SMS provider (Twilio/MessageBird)
-3. Enable phone confirmations
-
-### 5. Enable Realtime
-
-Dashboard → Database → Replication → Enable for:
-- `score_events`
-- `innings`
-- `matches`
-
-### 6. Run free-access migration (if DB already exists)
-
-In SQL Editor, run `supabase/migrations/20260528000004_free_access.sql` so any logged-in user can create tournaments.
-
-### 7. Start the app
+### 5. Start the app
 
 ```bash
 npx expo start
 ```
 
-**Demo mode:** Without `.env`, the app runs with mock data so you can preview the UI immediately.
+**Demo mode:** Without `EXPO_PUBLIC_API_URL` in `.env`, the app runs with mock data so you can preview the UI immediately.
 
-## Database Schema
+## API Endpoints
 
-Core tables: `profiles`, `tournaments`, `teams`, `players`, `matches`, `innings`, `score_events`, `points_table`, `player_match_stats`, `subscription_plans`, `subscriptions`, `payments`.
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/register` | Create account |
+| POST | `/auth/login` | Sign in |
+| GET | `/auth/me` | Current profile |
+| GET | `/tournaments` | List tournaments |
+| POST | `/tournaments` | Create tournament |
+| GET | `/matches/live` | Live matches |
+| POST | `/matches/innings/:id/score-events` | Record a ball |
 
-- Foreign keys & indexes on all relations
-- RLS policies for public read / organizer write
-- Trigger `sync_innings_from_event` updates totals on each ball
-- Realtime publication on scoring tables
-
-## Scoring System
-
-The scoring engine (`src/lib/scoring.ts`) handles:
-
-- Legal vs illegal deliveries (wide, no-ball)
-- Over calculation (`14.3` format)
-- Strike rotation on odd runs & end of over
-- Wicket recording with dismissal types
-- Run rate & required run rate
-
-Ball events insert into `score_events` → Supabase Realtime broadcasts to all viewers.
+Socket.io events: `join_innings`, `score_event`, `innings_updated`
 
 ## License
 

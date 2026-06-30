@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addText: { color: colors.orange, fontWeight: '600', fontSize: 14 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,

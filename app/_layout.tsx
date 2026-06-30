@@ -40,14 +40,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <AuthGuard>
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0A0612' } }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F8FAFC' } }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="match/[id]" options={{ presentation: 'card' }} />
             <Stack.Screen name="match/create" options={{ presentation: 'modal' }} />
             <Stack.Screen name="match/setup" options={{ presentation: 'card' }} />
+            <Stack.Screen name="match/scorecard/[matchId]" options={{ presentation: 'card' }} />
             <Stack.Screen name="tournament/[id]" />
             <Stack.Screen name="team/[id]" />
             <Stack.Screen name="tournament/create" options={{ presentation: 'modal' }} />

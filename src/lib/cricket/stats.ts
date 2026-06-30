@@ -179,6 +179,47 @@ export function computeBowlingStats(events: ScoreEvent[]): BowlerStats[] {
     .sort((a, b) => b.wickets - a.wickets || a.runs - b.runs);
 }
 
+function creaseSortKey(
+  playerId: string,
+  strikerId?: string | null,
+  nonStrikerId?: string | null
+): number {
+  if (playerId === strikerId) return 0;
+  if (playerId === nonStrikerId) return 1;
+  return 2;
+}
+
+/** Includes on-crease batters with 0 (0) before they face a ball. */
+export function battingStatsForDisplay(
+  events: ScoreEvent[],
+  crease?: { strikerId?: string | null; nonStrikerId?: string | null }
+): BatterStats[] {
+  const map = new Map(computeBattingStats(events).map((s) => [s.playerId, s]));
+  if (crease) {
+    for (const id of [crease.strikerId, crease.nonStrikerId].filter(Boolean) as string[]) {
+      if (!map.has(id)) map.set(id, finalizeBatter(emptyBatter(id)));
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const oa = creaseSortKey(a.playerId, crease?.strikerId, crease?.nonStrikerId);
+    const ob = creaseSortKey(b.playerId, crease?.strikerId, crease?.nonStrikerId);
+    if (oa !== ob) return oa - ob;
+    return b.runs - a.runs || b.balls - a.balls;
+  });
+}
+
+/** Includes current bowler with 0.0 figures before they bowl. */
+export function bowlingStatsForDisplay(
+  events: ScoreEvent[],
+  bowlerId?: string | null
+): BowlerStats[] {
+  const list = computeBowlingStats(events);
+  if (bowlerId && !list.some((b) => b.playerId === bowlerId)) {
+    return [finalizeBowler(emptyBowler(bowlerId)), ...list];
+  }
+  return list;
+}
+
 /** Active partnership for current two batters on crease. */
 export function computePartnershipFromReplay(
   events: ScoreEvent[],

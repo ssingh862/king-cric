@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Player } from '../../types/database';
 import type { MatchOutcome } from '../../lib/matchFlow';
@@ -44,14 +43,14 @@ export function MotmPickerModal({
     >
       <View style={styles.overlay}>
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-          <LinearGradient colors={['#2a1f4a', '#0A0612']} style={styles.header}>
+          <View style={styles.header}>
             <Ionicons name="star" size={32} color={colors.gold} />
-            <Text style={styles.title}>Pick Man of the Match</Text>
+            <Text style={styles.title}>PLAYER OF THE MATCH</Text>
             <Text style={styles.winner}>{outcome.winnerName} won</Text>
             <Text style={styles.scores}>{outcome.innings1Line}</Text>
             <Text style={styles.scores}>{outcome.innings2Line}</Text>
             <Text style={styles.hint}>Tap any player from either team</Text>
-          </LinearGradient>
+          </View>
 
           <ScrollView
             style={styles.list}
@@ -94,11 +93,11 @@ export function MotmPickerModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '90%',
@@ -111,6 +110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
+    backgroundColor: colors.warningLight,
   },
   title: { color: colors.gold, fontSize: 20, fontWeight: '800', marginTop: 8 },
   winner: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 12 },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  rowPressed: { backgroundColor: 'rgba(255,215,0,0.12)', borderColor: colors.gold },
+  rowPressed: { backgroundColor: colors.warningLight, borderColor: colors.gold },
   rowMain: { flex: 1 },
   name: { color: colors.text, fontSize: 17, fontWeight: '700' },
   jersey: { color: colors.textMuted, fontSize: 13, marginTop: 2 },

@@ -1,7 +1,7 @@
 import type { Innings, ScoreEvent } from '../types/database';
 import { replayInnings } from './cricket';
 import type { MatchRules } from './cricket/types';
-import { supabase, isSupabaseConfigured } from './supabase';
+import { apiSafe, isApiConfigured } from './api';
 
 export interface CreaseOverride {
   strikerId: string | null;
@@ -24,13 +24,13 @@ export async function syncInningsToDb(
   const nonStrikerId = creaseOverride?.nonStrikerId ?? snap.nonStrikerId;
   const bowlerId = creaseOverride?.bowlerId ?? snap.bowlerId;
 
-  if (!isSupabaseConfigured()) {
+  if (!isApiConfigured()) {
     return { error: null, snap };
   }
 
-  const { error } = await supabase
-    .from('innings')
-    .update({
+  const { error } = await apiSafe(`/matches/innings/${innings.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
       total_runs: snap.totalRuns,
       total_wickets: snap.totalWickets,
       total_overs:
@@ -40,10 +40,10 @@ export async function syncInningsToDb(
       striker_player_id: strikerId,
       non_striker_player_id: nonStrikerId,
       current_bowler_id: bowlerId,
-    })
-    .eq('id', innings.id);
+    }),
+  });
 
-  return { error: error?.message ?? null, snap };
+  return { error, snap };
 }
 
 export function getCurrentOverNumber(events: ScoreEvent[]): number {

@@ -20,7 +20,6 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#1A0A2E', '#0A0612']} style={styles.header} />
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.avatarWrap}>
@@ -60,7 +59,6 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  header: { position: 'absolute', top: 0, left: 0, right: 0, height: 220 },
   flex: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 40 },
   avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 20 },
@@ -81,7 +79,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: 'rgba(0,200,83,0.15)',
+    backgroundColor: colors.successLight,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     borderRadius: 20,
   },
   premiumText: { color: colors.green, fontWeight: '800', fontSize: 12 },

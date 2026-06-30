@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,6 +13,7 @@ import { MOCK_TOURNAMENTS } from '../../src/lib/mockData';
 import { deleteMatch } from '../../src/lib/matches';
 import { recalculateTournamentPoints } from '../../src/lib/pointsTable';
 import { canManageTournament } from '../../src/lib/permissions';
+import { isApiConfigured } from '../../src/lib/api';
 import { colors } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 
@@ -40,13 +40,23 @@ export default function TournamentScreen() {
     [matches]
   );
 
-  const t = tournament ?? MOCK_TOURNAMENTS.find((x) => x.id === id) ?? MOCK_TOURNAMENTS[0];
-  const table = process.env.EXPO_PUBLIC_SUPABASE_URL ? points : DEMO_POINTS;
+  const t = tournament ?? (isApiConfigured() ? null : MOCK_TOURNAMENTS.find((x) => x.id === id) ?? MOCK_TOURNAMENTS[0]);
+  const table = isApiConfigured() ? points : DEMO_POINTS;
   const canManage = canManageTournament(tournament ?? null, profile);
 
   useFocusEffect(
     useCallback(() => {
-      if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !id || !canManage) return;
+      if (!isApiConfigured() || !id) return;
+      void queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+      void queryClient.invalidateQueries({ queryKey: ['tournament-matches', id] });
+      void queryClient.invalidateQueries({ queryKey: ['tournament-teams', id] });
+      void queryClient.invalidateQueries({ queryKey: ['points', id] });
+    }, [id, queryClient])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isApiConfigured() || !id || !canManage) return;
       let cancelled = false;
       (async () => {
         const { error } = await recalculateTournamentPoints(id);
@@ -87,7 +97,6 @@ export default function TournamentScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#1A0A2E', '#0A0612']} style={styles.header} />
       <SafeAreaView style={styles.flex}>
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()}>
@@ -106,8 +115,12 @@ export default function TournamentScreen() {
           )}
         </View>
 
-        {isLoading && process.env.EXPO_PUBLIC_SUPABASE_URL ? (
+        {isLoading && isApiConfigured() ? (
           <ActivityIndicator color={colors.orange} style={{ marginTop: 40 }} />
+        ) : !t ? (
+          <View style={styles.centered}>
+            <Text style={styles.viewerHint}>Tournament not found</Text>
+          </View>
         ) : (
           <ScrollView contentContainerStyle={styles.scroll}>
             <Text style={styles.name}>{t.name}</Text>
@@ -126,7 +139,7 @@ export default function TournamentScreen() {
               </GlassCard>
             </View>
 
-            {!canManage && process.env.EXPO_PUBLIC_SUPABASE_URL ? (
+            {!canManage && isApiConfigured() ? (
               <GlassCard style={{ marginBottom: 20 }}>
                 <Text style={styles.viewerHint}>
                   You are viewing as a fan. Live scores, results, and points are public. Only the
@@ -162,7 +175,7 @@ export default function TournamentScreen() {
 
             <PointsTable rows={table ?? []} />
 
-            {process.env.EXPO_PUBLIC_SUPABASE_URL && teams && teams.length >= 2 && (
+            {isApiConfigured() && (
               <>
                 {activeMatches.length > 0 && (
                   <>
@@ -296,7 +309,6 @@ export default function TournamentScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  header: { position: 'absolute', top: 0, left: 0, right: 0, height: 200 },
   flex: { flex: 1 },
   topBar: {
     flexDirection: 'row',
@@ -308,6 +320,7 @@ const styles = StyleSheet.create({
   editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   editText: { color: colors.orange, fontWeight: '600' },
   scroll: { padding: 20, paddingBottom: 40 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   name: { color: colors.text, fontSize: 28, fontWeight: '800' },
   meta: { color: colors.textMuted, marginTop: 8, marginBottom: 24 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },

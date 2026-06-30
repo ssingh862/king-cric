@@ -79,6 +79,21 @@ export function maxLegalBalls(rules: MatchRules): number {
   return rules.oversPerInnings * rules.ballsPerOver;
 }
 
+/** Teams under 11: everyone can bat and get out. Standard 11+: all out at 10 wickets. */
+export function maxWicketsForSquad(squadSize: number): number {
+  if (squadSize <= 1) return 1;
+  if (squadSize >= 11) return 10;
+  return squadSize;
+}
+
+export function allOutWicketsLabel(squadSize?: number, maxWickets?: number): string {
+  const max = maxWickets ?? (squadSize ? maxWicketsForSquad(squadSize) : 10);
+  if (squadSize != null && squadSize < 11) {
+    return `all ${squadSize} players bat · out at ${max} wickets`;
+  }
+  return `all out at ${max} wickets`;
+}
+
 export function isInningsComplete(
   state: Pick<InningsState, 'totalWickets' | 'legalBalls' | 'totalRuns'>,
   rules: MatchRules,

@@ -13,28 +13,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LiveMatchCard } from '../../src/components/cricket/LiveMatchCard';
 import { GlassCard } from '../../src/components/ui/GlassCard';
-import { useCompletedMatches, useLiveMatches, useTournaments } from '../../src/hooks/useTournaments';
+import { useCompletedMatches, useLiveMatches, useActiveTournaments, useUpcomingMatches } from '../../src/hooks/useTournaments';
 import { MOCK_COMPLETED_MATCHES, MOCK_LIVE_MATCHES, MOCK_TOURNAMENTS } from '../../src/lib/mockData';
+import { isApiConfigured } from '../../src/lib/api';
 import { colors, radius } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
-
-const isSupabaseConfigured = () =>
-  Boolean(process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function HomeScreen() {
   const { profile } = useAuthStore();
   const { data: liveMatches, isLoading: liveLoading } = useLiveMatches();
+  const { data: upcomingMatches, isLoading: upcomingLoading } = useUpcomingMatches();
   const { data: completedMatches, isLoading: completedLoading } = useCompletedMatches();
-  const { data: tournaments, isLoading: tourLoading } = useTournaments('ongoing');
+  const { data: tournaments, isLoading: tourLoading } = useActiveTournaments();
 
-  const matches = isSupabaseConfigured() ? liveMatches : MOCK_LIVE_MATCHES;
-  const completed = isSupabaseConfigured() ? completedMatches : MOCK_COMPLETED_MATCHES;
-  const leagues = isSupabaseConfigured() ? tournaments : MOCK_TOURNAMENTS;
-  const loading = isSupabaseConfigured() && (liveLoading || completedLoading || tourLoading);
+  const matches = isApiConfigured() ? (liveMatches?.length ? liveMatches : upcomingMatches) : MOCK_LIVE_MATCHES;
+  const completed = isApiConfigured() ? completedMatches : MOCK_COMPLETED_MATCHES;
+  const leagues = isApiConfigured() ? tournaments : MOCK_TOURNAMENTS;
+  const loading = isApiConfigured() && (liveLoading || upcomingLoading || completedLoading || tourLoading);
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#1A0A2E', '#0A0612']} style={styles.headerGrad} />
       <SafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           <Animated.View entering={FadeInDown.springify()} style={styles.header}>
@@ -104,8 +102,11 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏆 Active Tournaments</Text>
-            {leagues?.map((t, i) => (
+            <Text style={styles.sectionTitle}>🏆 Tournaments</Text>
+            {loading ? (
+              <ActivityIndicator color={colors.orange} />
+            ) : leagues?.length ? (
+            leagues.map((t, i) => (
               <Animated.View key={t.id} entering={FadeInDown.delay(i * 60)}>
                 <Pressable onPress={() => router.push(`/tournament/${t.id}`)}>
                   <GlassCard delay={i * 40} style={{ marginBottom: 10 }}>
@@ -126,7 +127,12 @@ export default function HomeScreen() {
                   </GlassCard>
                 </Pressable>
               </Animated.View>
-            ))}
+            ))
+            ) : (
+              <GlassCard>
+                <Text style={styles.empty}>No tournaments yet — create one!</Text>
+              </GlassCard>
+            )}
           </View>
 
           {profile?.role === 'admin' && (
@@ -143,7 +149,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  headerGrad: { position: 'absolute', top: 0, left: 0, right: 0, height: 200 },
   flex: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
@@ -192,9 +197,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  statusLive: { backgroundColor: 'rgba(0,200,83,0.2)' },
+  statusLive: { backgroundColor: colors.successLight, borderColor: '#A7F3D0' },
   statusText: { color: colors.textMuted, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   adminLink: {
     flexDirection: 'row',

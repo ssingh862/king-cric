@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Pressable,
@@ -12,11 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardForm } from '../../src/components/ui/KeyboardForm';
 import { GradientButton } from '../../src/components/ui/GradientButton';
-import { supabase } from '../../src/lib/supabase';
+import { createTournament } from '../../src/lib/tournaments';
 import { colors, radius } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function CreateTournamentScreen() {
+  const queryClient = useQueryClient();
   const { profile } = useAuthStore();
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
@@ -35,37 +37,34 @@ export default function CreateTournamentScreen() {
       return;
     }
 
-    const slug = name
+    setLoading(true);
+    const slug = `${name
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/^-|-$/g, '')}-${Date.now().toString(36)}`;
 
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('tournaments')
-      .insert({
-        organizer_id: profile.id,
-        name: name.trim(),
-        slug: `${slug}-${Date.now().toString(36)}`,
-        city: city.trim() || null,
-        venue: venue.trim() || null,
-        format,
-        overs_per_innings: parseInt(overs, 10) || 20,
-        status: 'registration',
-      })
-      .select('id')
-      .single();
+    const { tournamentId, error } = await createTournament({
+      name: name.trim(),
+      slug,
+      city: city.trim() || undefined,
+      venue: venue.trim() || undefined,
+      format,
+      oversPerInnings: parseInt(overs, 10) || 20,
+      status: 'registration',
+    });
 
     setLoading(false);
 
     if (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error);
       return;
     }
 
+    await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+
     Alert.alert('Created!', 'Your tournament is live — completely free.', [
-      { text: 'OK', onPress: () => router.replace(`/tournament/${data.id}`) },
+      { text: 'OK', onPress: () => router.replace(`/tournament/${tournamentId}`) },
     ]);
   };
 
@@ -176,7 +175,7 @@ const styles = StyleSheet.create({
   freeText: { color: colors.green, fontSize: 14, fontWeight: '600' },
   label: { color: colors.textMuted, fontSize: 13, marginBottom: 8, marginTop: 12 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,

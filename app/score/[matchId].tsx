@@ -16,7 +16,6 @@ import { ActivePlayersBar } from '../../src/components/cricket/ActivePlayersBar'
 import { ChaseBanner } from '../../src/components/cricket/ChaseBanner';
 import { InningsFormatBanner } from '../../src/components/cricket/InningsFormatBanner';
 import { MatchResultModal } from '../../src/components/cricket/MatchResultModal';
-import { MotmPickerModal } from '../../src/components/cricket/MotmPickerModal';
 import { MatchPlayerStats } from '../../src/components/cricket/MatchPlayerStats';
 import { PartnershipPanel } from '../../src/components/cricket/PartnershipPanel';
 import { PlayerPickerModal, type PickerRole } from '../../src/components/cricket/PlayerPickerModal';
@@ -34,13 +33,14 @@ import { useTeamPlayers } from '../../src/hooks/useMatchScoring';
 import { computeChaseStatus } from '../../src/lib/cricket/chase';
 import {
   applyNewBatsmanToCrease,
+  consolidateLoneBatter,
   getRemainingBatters,
   vacantCreaseSlot,
 } from '../../src/lib/inningsPlayers';
 import { dedupeScoreEvents } from '../../src/lib/scoring';
 import {
   afterInningsCompleted,
-  finalizeMatchWithMotm,
+  autoFinalizeMatch,
   type MatchOutcome,
 } from '../../src/lib/matchFlow';
 import { canManageTournament } from '../../src/lib/permissions';
@@ -52,7 +52,8 @@ import {
 } from '../../src/stores/scoringStore';
 import { colors } from '../../src/lib/theme';
 import type { BallType, Player } from '../../src/types/database';
-import { isSupabaseConfigured, supabase } from '../../src/lib/supabase';
+import { fetchActiveInnings } from '../../src/lib/matches';
+import { isApiConfigured } from '../../src/lib/api';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function ScoringScreen() {
@@ -86,9 +87,6 @@ export default function ScoringScreen() {
   const [scoringBusy, setScoringBusy] = useState(false);
   const [wicketPickerOpen, setWicketPickerOpen] = useState(false);
   const [matchOutcome, setMatchOutcome] = useState<MatchOutcome | null>(null);
-  const [pendingOutcome, setPendingOutcome] = useState<MatchOutcome | null>(null);
-  const [motmPickerOpen, setMotmPickerOpen] = useState(false);
-  const [motmSaving, setMotmSaving] = useState(false);
   const [endingInnings, setEndingInnings] = useState(false);
 
   const battingTeamId = innings?.batting_team_id ?? '';
@@ -98,11 +96,20 @@ export default function ScoringScreen() {
   const { data: teamAPlayers } = useTeamPlayers(match?.team_a_id ?? '');
   const { data: teamBPlayers } = useTeamPlayers(match?.team_b_id ?? '');
 
-  const motmPlayers = useMemo(() => {
-    const byId = new Map<string, Player>();
-    [...(teamAPlayers ?? []), ...(teamBPlayers ?? [])].forEach((p) => byId.set(p.id, p));
-    return [...byId.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [teamAPlayers, teamBPlayers]);
+  const playerNames = useMemo(() => {
+    const m = new Map<string, string>();
+    [...(teamAPlayers ?? []), ...(teamBPlayers ?? []), ...(batters ?? []), ...(bowlers ?? [])].forEach(
+      (p) => m.set(p.id, p.full_name)
+    );
+    return m;
+  }, [teamAPlayers, teamBPlayers, batters, bowlers]);
+
+  const playerTeamIds = useMemo(() => {
+    const m = new Map<string, string>();
+    [...(teamAPlayers ?? [])].forEach((p) => m.set(p.id, match?.team_a_id ?? ''));
+    [...(teamBPlayers ?? [])].forEach((p) => m.set(p.id, match?.team_b_id ?? ''));
+    return m;
+  }, [teamAPlayers, teamBPlayers, match?.team_a_id, match?.team_b_id]);
 
   const canOrganize = useMemo(
     () => (match && profile ? canManageTournament(match.tournament, profile) : true),
@@ -126,15 +133,10 @@ export default function ScoringScreen() {
         setLoading(false);
         return;
       }
-      const { data: inn } = await supabase
-        .from('innings')
-        .select('*')
-        .eq('match_id', matchId)
-        .eq('status', 'in_progress')
-        .maybeSingle();
+      const { innings: inn } = await fetchActiveInnings(matchId);
       if (cancelled) return;
       if (inn) {
-        initFromInnings(inn);
+        initFromInnings(inn as never);
         await loadEvents(inn.id);
         unsubscribe = subscribeRealtime(inn.id);
       }
@@ -149,9 +151,10 @@ export default function ScoringScreen() {
 
   useEffect(() => {
     if (match?.overs_per_innings) {
-      setMatchRules(initMatchRulesFromOvers(match.overs_per_innings));
+      const squadSize = batters?.length;
+      setMatchRules(initMatchRulesFromOvers(match.overs_per_innings, squadSize));
     }
-  }, [match?.overs_per_innings, setMatchRules]);
+  }, [match?.overs_per_innings, batters?.length, setMatchRules]);
 
   const uniqueEvents = useMemo(() => dedupeScoreEvents(events), [events]);
   const snapshot = getSnapshot();
@@ -174,12 +177,6 @@ export default function ScoringScreen() {
     return m;
   }, [batters, bowlers]);
 
-  const playerNames = useMemo(() => {
-    const m = new Map<string, string>();
-    playerMap.forEach((p, id) => m.set(id, p.full_name));
-    return m;
-  }, [playerMap]);
-
   const remainingBatters = useMemo(
     () => getRemainingBatters(batters ?? [], uniqueEvents, { strikerId, nonStrikerId }),
     [batters, uniqueEvents, strikerId, nonStrikerId]
@@ -200,6 +197,23 @@ export default function ScoringScreen() {
     match?.team_a?.id === bowlingTeamId
       ? match.team_a.name
       : match?.team_b?.name ?? 'Bowling';
+
+  const finalizeMatchFlow = useCallback(async () => {
+    if (!matchId) return;
+    const { error, outcome } = await autoFinalizeMatch(matchId, playerNames, playerTeamIds);
+    if (error) {
+      Alert.alert('Could not finish match', error);
+      return;
+    }
+    if (!outcome) return;
+
+    await queryClient.invalidateQueries({ queryKey: ['points', outcome.tournamentId] });
+    await queryClient.invalidateQueries({ queryKey: ['tournament-matches', outcome.tournamentId] });
+    await queryClient.invalidateQueries({ queryKey: ['match', matchId] });
+    await queryClient.invalidateQueries({ queryKey: ['matches', 'completed'] });
+    await queryClient.invalidateQueries({ queryKey: ['matches', 'live'] });
+    setMatchOutcome(outcome);
+  }, [matchId, playerNames, playerTeamIds, queryClient]);
 
   const finishInningsFlow = useCallback(
     async (reason?: string) => {
@@ -233,48 +247,14 @@ export default function ScoringScreen() {
         return;
       }
 
-      if (next.step === 'pick_motm') {
-        setPendingOutcome(next.outcome);
-        setMotmPickerOpen(true);
+      if (next.step === 'finalize_match') {
+        await finalizeMatchFlow();
         return;
       }
 
       router.replace(`/match/${matchId}`);
     },
-    [innings, matchId, endingInnings, syncPlayersToDb]
-  );
-
-  const onMotmSelect = useCallback(
-    async (player: Player) => {
-      if (!pendingOutcome || !matchId) return;
-      setMotmSaving(true);
-      const { error, outcome } = await finalizeMatchWithMotm(
-        matchId,
-        pendingOutcome,
-        player.id,
-        player.full_name
-      );
-      setMotmSaving(false);
-
-      if (error) {
-        Alert.alert('Could not save match', error);
-        return;
-      }
-
-      setMotmPickerOpen(false);
-      setPendingOutcome(null);
-      await queryClient.invalidateQueries({
-        queryKey: ['points', pendingOutcome.tournamentId],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ['tournament-matches', pendingOutcome.tournamentId],
-      });
-      await queryClient.invalidateQueries({ queryKey: ['match', matchId] });
-      await queryClient.invalidateQueries({ queryKey: ['matches', 'completed'] });
-      await queryClient.invalidateQueries({ queryKey: ['matches', 'live'] });
-      setMatchOutcome(outcome);
-    },
-    [pendingOutcome, matchId, queryClient]
+    [innings, matchId, endingInnings, syncPlayersToDb, finalizeMatchFlow]
   );
 
   const handleInningsComplete = useCallback(
@@ -286,10 +266,7 @@ export default function ScoringScreen() {
             ? 'Target reached'
             : 'All out';
 
-      Alert.alert('Innings over', `${reason}. End this innings now?`, [
-        { text: 'Continue', style: 'cancel' },
-        { text: 'End innings', onPress: () => finishInningsFlow(reason) },
-      ]);
+      finishInningsFlow(reason);
     },
     [finishInningsFlow, matchRules.oversPerInnings]
   );
@@ -303,8 +280,12 @@ export default function ScoringScreen() {
 
   const onBall = async (type: BallType, opts?: { isWicket?: boolean }) => {
     if (scoringBusy || followUp) return;
-    if (!strikerId || !nonStrikerId || !bowlerId) {
-      Alert.alert('Select players', 'Choose striker, non-striker and bowler before scoring.');
+    if (!strikerId || !bowlerId) {
+      Alert.alert('Select players', 'Choose striker and bowler before scoring.');
+      return;
+    }
+    if (!nonStrikerId && uniqueEvents.length === 0) {
+      Alert.alert('Select players', 'Choose non-striker before the first ball.');
       return;
     }
     if (opts?.isWicket || type === 'wicket') {
@@ -326,24 +307,12 @@ export default function ScoringScreen() {
     }
 
     if (result.followUp === 'new_batsman') {
-      const { events: ev, strikerId: s, nonStrikerId: ns } = useScoringStore.getState();
-      const remaining = getRemainingBatters(batters ?? [], ev, {
-        strikerId: s,
-        nonStrikerId: ns,
-      });
-      if (remaining.length === 0) {
-        Alert.alert('All out', 'No batters left. End this innings?', [
-          { text: 'Continue', style: 'cancel' },
-          { text: 'End innings', onPress: () => finishInningsFlow('All out') },
-        ]);
-        return;
-      }
+      setFollowUp(result.followUp);
+      if (result.endOfOverPending) setPendingBowlerAfterBatsman(true);
+      return;
     }
 
     if (result.followUp) {
-      if (result.followUp === 'new_batsman' && result.endOfOverPending) {
-        setPendingBowlerAfterBatsman(true);
-      }
       setFollowUp(result.followUp);
     }
   };
@@ -468,7 +437,10 @@ export default function ScoringScreen() {
   }
 
   const pickerPlayers = pickerRole === 'bowler' ? bowlers ?? [] : batters ?? [];
-  const playersReady = !!(strikerId && nonStrikerId && bowlerId);
+  const canBatSolo = (matchRules.battingSquadSize ?? 11) < 11;
+  const loneBatterOk =
+    canBatSolo && uniqueEvents.length > 0 && !!strikerId && !nonStrikerId;
+  const playersReady = !!(strikerId && bowlerId && (nonStrikerId || loneBatterOk));
   const padDisabled = scoringBusy || !!followUp || !playersReady;
 
   return (
@@ -560,10 +532,13 @@ export default function ScoringScreen() {
 
           <RecentBallsStrip events={uniqueEvents} />
 
-          {uniqueEvents.length > 0 && (
+          {playersReady && (
             <MatchPlayerStats
               events={uniqueEvents}
               playerNames={playerNames}
+              strikerId={strikerId}
+              nonStrikerId={nonStrikerId}
+              bowlerId={bowlerId}
               title="Player stats (this innings)"
             />
           )}
@@ -601,21 +576,6 @@ export default function ScoringScreen() {
         nonStriker={nonStrikerId ? playerMap.get(nonStrikerId) ?? null : null}
         onConfirm={onWicketConfirm}
         onClose={() => setWicketPickerOpen(false)}
-      />
-
-      <MotmPickerModal
-        visible={motmPickerOpen}
-        outcome={pendingOutcome}
-        players={motmPlayers}
-        loading={motmSaving}
-        onSelect={onMotmSelect}
-        onClose={() => {
-          if (motmSaving) return;
-          Alert.alert(
-            'Man of the Match required',
-            'Pick a player to finish the match and update the points table.'
-          );
-        }}
       />
 
       <MatchResultModal
@@ -666,7 +626,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,107,0,0.15)',
+    backgroundColor: colors.orangeLight,
     borderWidth: 1,
     borderColor: colors.orange,
   },
@@ -676,11 +636,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 10,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,193,7,0.2)',
-    borderWidth: 1,
-    borderColor: '#ffc107',
+    backgroundColor: colors.warningLight,
+    borderColor: '#FDE68A',
   },
-  freeHitText: { color: '#ffc107', fontWeight: '800', fontSize: 13, textAlign: 'center' },
+  freeHitText: { color: colors.gold, fontWeight: '800', fontSize: 13, textAlign: 'center' },
   scroll: { padding: 16, paddingBottom: 32 },
   noInnings: { color: colors.textMuted, fontSize: 16, marginBottom: 16 },
   setupBtn: {

@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 18, fontWeight: '700' },
   label: { color: colors.textMuted, fontSize: 13, marginBottom: 8, marginTop: 12 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,

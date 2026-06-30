@@ -37,11 +37,13 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: colors.liveLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     gap: 6,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   dot: {
     width: 8,

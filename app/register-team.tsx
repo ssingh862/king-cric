@@ -14,6 +14,7 @@ import { GradientButton } from '../src/components/ui/GradientButton';
 import { draftsToPlayerInput } from '../src/lib/players';
 import { canManageTournament } from '../src/lib/permissions';
 import { registerTeam } from '../src/lib/teams';
+import { isApiConfigured } from '../src/lib/api';
 import { colors, radius } from '../src/lib/theme';
 import { useAuthStore } from '../src/stores/authStore';
 import { useTournament } from '../src/hooks/useTournaments';
@@ -61,8 +62,8 @@ export default function RegisterTeamScreen() {
       return;
     }
 
-    if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-      Alert.alert('Demo', 'Connect Supabase to register teams.');
+    if (!isApiConfigured()) {
+      Alert.alert('Demo', 'Connect the API server to register teams.');
       return;
     }
 
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
   sub: { color: colors.textMuted, fontSize: 14, marginBottom: 12 },
   label: { color: colors.textMuted, fontSize: 13, marginBottom: 8, marginTop: 12 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,

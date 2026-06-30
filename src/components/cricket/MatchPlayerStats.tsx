@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ScoreEvent } from '../../types/database';
-import { computeBattingStats, computeBowlingStats } from '../../lib/playerStats';
+import { battingStatsForDisplay, bowlingStatsForDisplay } from '../../lib/playerStats';
 import { dedupeScoreEvents } from '../../lib/scoring';
 import { colors, radius } from '../../lib/theme';
 
@@ -8,12 +9,15 @@ interface MatchPlayerStatsProps {
   events: ScoreEvent[];
   playerNames: Map<string, string>;
   title?: string;
+  strikerId?: string | null;
+  nonStrikerId?: string | null;
+  bowlerId?: string | null;
 }
 
 type ColDef = { label: string; width: number };
 
 const BATTING_COLS: ColDef[] = [
-  { label: 'Batsman', width: 96 },
+  { label: 'Batsman', width: 108 },
   { label: 'Score', width: 64 },
   { label: '4s', width: 28 },
   { label: '6s', width: 28 },
@@ -78,12 +82,47 @@ function Cell({
   );
 }
 
-export function MatchPlayerStats({ events, playerNames, title }: MatchPlayerStatsProps) {
-  const uniqueEvents = dedupeScoreEvents(events);
-  const batters = computeBattingStats(uniqueEvents);
-  const bowlers = computeBowlingStats(uniqueEvents);
+function BatsmanCell({
+  width,
+  name,
+  isStriker,
+  isOut,
+}: {
+  width: number;
+  name: string;
+  isStriker: boolean;
+  isOut: boolean;
+}) {
+  return (
+    <View style={[styles.batsmanCell, { width }]}>
+      {isStriker ? (
+        <View style={styles.batIcon}>
+          <MaterialCommunityIcons name="cricket" size={12} color="#fff" />
+        </View>
+      ) : (
+        <View style={styles.batSpacer} />
+      )}
+      <Text style={[styles.cell, styles.cellBold, styles.cellLeft, styles.batsmanName]} numberOfLines={1}>
+        {`${name}${isOut ? '' : ' *'}`}
+      </Text>
+    </View>
+  );
+}
 
-  if (!events.length) return null;
+export function MatchPlayerStats({
+  events,
+  playerNames,
+  title,
+  strikerId,
+  nonStrikerId,
+  bowlerId,
+}: MatchPlayerStatsProps) {
+  const uniqueEvents = dedupeScoreEvents(events);
+  const batters = battingStatsForDisplay(uniqueEvents, { strikerId, nonStrikerId });
+  const bowlers = bowlingStatsForDisplay(uniqueEvents, bowlerId);
+
+  const hasCrease = !!(strikerId || nonStrikerId || bowlerId);
+  if (!uniqueEvents.length && !hasCrease) return null;
 
   const name = (id: string) => playerNames.get(id) ?? 'Player';
 
@@ -97,9 +136,12 @@ export function MatchPlayerStats({ events, playerNames, title }: MatchPlayerStat
           <StatHeader cols={BATTING_COLS} />
           {batters.map((b) => (
             <View key={b.playerId} style={styles.dataRow}>
-              <Cell width={BATTING_COLS[0].width} alignLeft bold>
-                {`${name(b.playerId)}${b.isOut ? '' : ' *'}`}
-              </Cell>
+              <BatsmanCell
+                width={BATTING_COLS[0].width}
+                name={name(b.playerId)}
+                isStriker={b.playerId === strikerId}
+                isOut={b.isOut}
+              />
               <Cell width={BATTING_COLS[1].width} bold>
                 {b.scoreLine}
               </Cell>
@@ -138,7 +180,7 @@ export function MatchPlayerStats({ events, playerNames, title }: MatchPlayerStat
       </ScrollView>
 
       <Text style={styles.legend}>
-        O = overs.balls (e.g. 0.3 = 3 balls, 4.2 = 4 overs 2 balls) · * not out
+        O = overs.balls · * not out · orange bat = facing the ball
       </Text>
     </View>
   );
@@ -148,7 +190,7 @@ const styles = StyleSheet.create({
   wrap: {
     marginBottom: 20,
     padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -167,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: colors.cardBorder,
   },
   headerCell: {
     color: colors.textDim,
@@ -182,5 +224,22 @@ const styles = StyleSheet.create({
   },
   cellBold: { color: colors.text, fontWeight: '700' },
   cellLeft: { textAlign: 'left' },
+  batsmanCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingRight: 4,
+  },
+  batIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.orange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  batSpacer: { width: 20, flexShrink: 0 },
+  batsmanName: { flex: 1, minWidth: 0 },
   legend: { color: colors.textDim, fontSize: 10, marginTop: 12 },
 });

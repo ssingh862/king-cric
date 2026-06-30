@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { LiveBadge } from '../ui/LiveBadge';
 import { formatOvers, runRate } from '../../lib/scoring';
 import type { MatchRules } from '../../lib/cricket/types';
-import { colors } from '../../lib/theme';
+import { colors, radius, shadows } from '../../lib/theme';
 
 interface ScoreboardHeaderProps {
   battingTeam: string;
@@ -35,7 +35,7 @@ export function ScoreboardHeader({
   const overs = formatOvers(legalBalls, ballsPerOver);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, shadows.card]}>
       <View style={styles.top}>
         {isLive && <LiveBadge />}
         <Text style={styles.bowling}>vs {bowlingTeam}</Text>
@@ -45,6 +45,9 @@ export function ScoreboardHeader({
       <Text style={styles.score}>
         {runs}/{wickets}
       </Text>
+      {matchRules ? (
+        <Text style={styles.wicketCap}>max {matchRules.maxWickets} wickets</Text>
+      ) : null}
       <Text style={styles.overs}>{overs} overs</Text>
 
       <View style={styles.statsRow}>
@@ -81,33 +84,47 @@ export function ScoreboardHeader({
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: 'rgba(255,107,0,0.12)',
-    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,107,0,0.35)',
+    borderColor: colors.cardBorder,
     marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.orange,
   },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  bowling: { color: colors.textMuted, fontSize: 13 },
-  battingTeam: { color: colors.textMuted, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1 },
+  bowling: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  battingTeam: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
   score: { color: colors.text, fontSize: 52, fontWeight: '800', marginTop: 4 },
-  overs: { color: colors.orange, fontSize: 18, fontWeight: '600', marginTop: 4 },
-  statsRow: { flexDirection: 'row', marginTop: 16, gap: 12 },
+  wicketCap: { color: colors.textDim, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  overs: { color: colors.orange, fontSize: 18, fontWeight: '700', marginTop: 4 },
+  statsRow: { flexDirection: 'row', marginTop: 16, gap: 10 },
   stat: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 12,
-    padding: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  statVal: { color: colors.text, fontWeight: '700', fontSize: 14 },
-  statLabel: { color: colors.textDim, fontSize: 10, marginTop: 2 },
+  statVal: { color: colors.text, fontWeight: '800', fontSize: 14 },
+  statLabel: { color: colors.textMuted, fontSize: 10, marginTop: 4, fontWeight: '600' },
   chaseMini: {
     color: colors.text,
     fontSize: 14,
     fontWeight: '700',
-    marginTop: 12,
+    marginTop: 14,
     textAlign: 'center',
+    backgroundColor: colors.orangeLight,
+    padding: 10,
+    borderRadius: radius.sm,
   },
 });

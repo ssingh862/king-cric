@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native';
 import type { BallType } from '../../types/database';
-import { colors, radius } from '../../lib/theme';
+import { colors, radius, shadows } from '../../lib/theme';
 
 const RUN_BUTTONS: { label: string; type: BallType; runs?: number }[] = [
   { label: '0', type: 'dot' },
@@ -32,7 +32,8 @@ export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, shadows.card]}>
+      <Text style={styles.label}>Record ball</Text>
       <View style={styles.row}>
         {RUN_BUTTONS.map((b) => (
           <Pressable
@@ -41,7 +42,7 @@ export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
             onPress={() => press(b.type)}
             disabled={disabled}
           >
-            <Text style={styles.btnText}>{b.label}</Text>
+            <Text style={[styles.btnText, b.label === '6' && styles.sixText]}>{b.label}</Text>
           </Pressable>
         ))}
       </View>
@@ -69,27 +70,43 @@ export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 10 },
+  container: {
+    gap: 10,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  label: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   btn: {
     flex: 1,
     minWidth: 48,
-    paddingVertical: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 16,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  fourBtn: { borderColor: colors.blue },
-  sixBtn: { borderColor: colors.orange, backgroundColor: 'rgba(255,107,0,0.15)' },
-  extraBtn: { backgroundColor: 'rgba(123,44,191,0.2)' },
+  fourBtn: { borderColor: colors.blue, backgroundColor: '#EFF6FF' },
+  sixBtn: { borderColor: colors.orange, backgroundColor: colors.orangeLight },
+  extraBtn: { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' },
   wicketBtn: {
     flex: 1.5,
-    backgroundColor: 'rgba(255,23,68,0.2)',
+    backgroundColor: colors.liveLight,
     borderColor: colors.live,
   },
-  btnText: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  extraText: { color: colors.purple, fontSize: 14, fontWeight: '600' },
+  btnText: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  sixText: { color: colors.orange },
+  extraText: { color: colors.purple, fontSize: 14, fontWeight: '700' },
   wicketText: { color: colors.live, fontSize: 14, fontWeight: '800' },
 });

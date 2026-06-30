@@ -1,23 +1,44 @@
-import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LiveMatchCard } from '../../src/components/cricket/LiveMatchCard';
-import { useCompletedMatches, useLiveMatches } from '../../src/hooks/useTournaments';
+import { useCompletedMatches, useLiveMatches, useUpcomingMatches } from '../../src/hooks/useTournaments';
 import { MOCK_LIVE_MATCHES } from '../../src/lib/mockData';
+import { isApiConfigured } from '../../src/lib/api';
 import { colors } from '../../src/lib/theme';
 
-export default function LiveScreen() {
-  const { data: liveData, isLoading: liveLoading } = useLiveMatches();
-  const { data: completedData, isLoading: completedLoading } = useCompletedMatches();
-  const useApi = !!process.env.EXPO_PUBLIC_SUPABASE_URL;
+type MatchCard = {
+  id: string;
+  status: string;
+  result_summary?: string | null;
+  team_a?: { id: string; name: string; short_name?: string | null };
+  team_b?: { id: string; name: string; short_name?: string | null };
+  tournament?: { name: string; city?: string | null };
+};
 
-  const liveMatches = useApi ? liveData : MOCK_LIVE_MATCHES;
-  const completedMatches = useApi ? completedData : [];
-  const loading = useApi && (liveLoading || completedLoading);
+export default function LiveScreen() {
+  const queryClient = useQueryClient();
+  const { data: liveData, isLoading: liveLoading } = useLiveMatches();
+  const { data: upcomingData, isLoading: upcomingLoading } = useUpcomingMatches();
+  const { data: completedData, isLoading: completedLoading } = useCompletedMatches();
+  const useApi = isApiConfigured();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!useApi) return;
+      void queryClient.invalidateQueries({ queryKey: ['matches'] });
+    }, [useApi, queryClient])
+  );
+
+  const liveMatches = (useApi ? liveData : MOCK_LIVE_MATCHES) as MatchCard[] | undefined;
+  const upcomingMatches = (useApi ? upcomingData : []) as MatchCard[] | undefined;
+  const completedMatches = (useApi ? completedData : []) as MatchCard[] | undefined;
+  const loading = useApi && (liveLoading || upcomingLoading || completedLoading);
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['rgba(255,23,68,0.15)', '#0A0612']} style={styles.grad} />
       <SafeAreaView style={styles.flex}>
         <Text style={styles.title}>Matches</Text>
         <Text style={styles.sub}>Live scores and completed results</Text>
@@ -31,6 +52,13 @@ export default function LiveScreen() {
                 liveMatches.map((m, i) => <LiveMatchCard key={m.id} match={m} index={i} />)
               ) : (
                 <Text style={styles.emptySection}>No live matches right now</Text>
+              )}
+
+              <Text style={[styles.sectionTitle, styles.sectionGap]}>Upcoming</Text>
+              {upcomingMatches?.length ? (
+                upcomingMatches.map((m, i) => <LiveMatchCard key={m.id} match={m} index={i} />)
+              ) : (
+                <Text style={styles.emptySection}>No scheduled matches yet</Text>
               )}
 
               <Text style={[styles.sectionTitle, styles.sectionGap]}>Completed</Text>
@@ -51,7 +79,6 @@ export default function LiveScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  grad: { position: 'absolute', top: 0, left: 0, right: 0, height: 180 },
   flex: { flex: 1, padding: 20 },
   title: { color: colors.text, fontSize: 28, fontWeight: '800' },
   sub: { color: colors.textMuted, marginTop: 4, marginBottom: 20 },

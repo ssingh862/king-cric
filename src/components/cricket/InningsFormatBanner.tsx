@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { MatchRules } from '../../lib/cricket/types';
 import { formatOvers } from '../../lib/scoring';
-import { maxLegalBalls } from '../../lib/cricket/rules';
+import { maxLegalBalls, allOutWicketsLabel } from '../../lib/cricket/rules';
 import { colors, radius } from '../../lib/theme';
 
 interface InningsFormatBannerProps {
@@ -17,10 +17,13 @@ export function InningsFormatBanner({ rules, legalBalls }: InningsFormatBannerPr
   return (
     <View style={styles.wrap}>
       <Text style={styles.main}>
-        {rules.oversPerInnings} overs per innings · {formatOvers(legalBalls, rules.ballsPerOver)} bowled
+        {rules.oversPerInnings} overs · {allOutWicketsLabel(rules.battingSquadSize, rules.maxWickets)}
       </Text>
       <Text style={styles.sub}>
-        {ballsLeft > 0 ? `${oversLeft} overs (${ballsLeft} balls) remaining` : 'Innings overs complete'}
+        {formatOvers(legalBalls, rules.ballsPerOver)} bowled
+        {ballsLeft > 0
+          ? ` · ${oversLeft} (${ballsLeft} balls) left`
+          : ' · overs complete'}
       </Text>
     </View>
   );

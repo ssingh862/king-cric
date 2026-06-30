@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { api, apiSafe } from './api';
 
 export async function createMatch(input: {
   tournamentId: string;
@@ -8,29 +8,26 @@ export async function createMatch(input: {
   scheduledAt?: string;
   oversPerInnings?: number;
 }) {
-  const { data, error } = await supabase
-    .from('matches')
-    .insert({
+  const { data, error } = await apiSafe<{ id: string }>('/matches', {
+    method: 'POST',
+    body: JSON.stringify({
       tournament_id: input.tournamentId,
       team_a_id: input.teamAId,
       team_b_id: input.teamBId,
       venue: input.venue ?? null,
       scheduled_at: input.scheduledAt ?? new Date().toISOString(),
-      status: 'scheduled',
       overs_per_innings: input.oversPerInnings ?? 20,
-    })
-    .select('id')
-    .single();
-
-  return { matchId: data?.id, error: error?.message ?? null };
+    }),
+  });
+  return { matchId: data?.id, error };
 }
 
 export async function startMatchLive(matchId: string) {
-  const { error } = await supabase
-    .from('matches')
-    .update({ status: 'live' })
-    .eq('id', matchId);
-  return { error: error?.message ?? null };
+  const { error } = await apiSafe(`/matches/${matchId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'live' }),
+  });
+  return { error };
 }
 
 export async function startInnings(input: {
@@ -43,74 +40,57 @@ export async function startInnings(input: {
   bowlerId: string;
   targetRuns?: number;
 }) {
-  const { data, error } = await supabase
-    .from('innings')
-    .insert({
-      match_id: input.matchId,
+  const { data, error } = await apiSafe<Record<string, unknown>>(`/matches/${input.matchId}/innings`, {
+    method: 'POST',
+    body: JSON.stringify({
       batting_team_id: input.battingTeamId,
       bowling_team_id: input.bowlingTeamId,
       innings_number: input.inningsNumber,
-      status: 'in_progress',
       striker_player_id: input.strikerId,
       non_striker_player_id: input.nonStrikerId,
       current_bowler_id: input.bowlerId,
       target_runs: input.targetRuns ?? null,
-    })
-    .select('*')
-    .single();
-
-  if (!error) {
-    await supabase
-      .from('matches')
-      .update({ status: 'live', current_innings_number: input.inningsNumber })
-      .eq('id', input.matchId);
-  }
-
-  return { innings: data, error: error?.message ?? null };
+    }),
+  });
+  return { innings: data, error };
 }
 
 export async function fetchMatchInnings(matchId: string) {
-  const { data, error } = await supabase
-    .from('innings')
-    .select('*, batting_team:teams!innings_batting_team_id_fkey(id, name, short_name), bowling_team:teams!innings_bowling_team_id_fkey(id, name, short_name)')
-    .eq('match_id', matchId)
-    .order('innings_number');
-
-  return { innings: data ?? [], error: error?.message ?? null };
+  const { data, error } = await apiSafe<Record<string, unknown>[]>(`/matches/${matchId}/innings`);
+  return { innings: data ?? [], error };
 }
 
 export async function fetchTeamPlayers(teamId: string) {
-  const { data, error } = await supabase
-    .from('players')
-    .select('id, full_name, jersey_number, role, is_captain, is_wicket_keeper')
-    .eq('team_id', teamId)
-    .order('jersey_number');
+  const { data, error } = await apiSafe<Record<string, unknown>[]>(`/matches/teams/${teamId}/players`);
+  return { players: data ?? [], error };
+}
 
-  return { players: data ?? [], error: error?.message ?? null };
+export async function fetchActiveInnings(matchId: string) {
+  const { data, error } = await apiSafe<Record<string, unknown> | null>(`/matches/${matchId}/active-innings`);
+  return { innings: data, error };
 }
 
 export async function completeInnings(inningsId: string) {
-  const { error } = await supabase
-    .from('innings')
-    .update({ status: 'completed' })
-    .eq('id', inningsId);
-  return { error: error?.message ?? null };
+  const { error } = await apiSafe(`/matches/innings/${inningsId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'completed' }),
+  });
+  return { error };
 }
 
 export async function completeMatch(matchId: string, winnerTeamId: string | null, summary: string) {
-  const { error } = await supabase
-    .from('matches')
-    .update({
+  const { error } = await apiSafe(`/matches/${matchId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
       status: 'completed',
       winner_team_id: winnerTeamId,
       result_summary: summary,
-    })
-    .eq('id', matchId);
-  return { error: error?.message ?? null };
+    }),
+  });
+  return { error };
 }
 
-/** Deletes a match and cascades innings, score events, and player match stats. */
 export async function deleteMatch(matchId: string) {
-  const { error } = await supabase.from('matches').delete().eq('id', matchId);
-  return { error: error?.message ?? null };
+  const { error } = await apiSafe(`/matches/${matchId}`, { method: 'DELETE' });
+  return { error };
 }

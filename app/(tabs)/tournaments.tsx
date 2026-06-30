@@ -1,16 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { useTournaments } from '../../src/hooks/useTournaments';
 import { MOCK_TOURNAMENTS } from '../../src/lib/mockData';
+import { isApiConfigured } from '../../src/lib/api';
 import { colors } from '../../src/lib/theme';
 
 export default function TournamentsScreen() {
-  const { data, isLoading } = useTournaments();
-  const list = process.env.EXPO_PUBLIC_SUPABASE_URL ? data : MOCK_TOURNAMENTS;
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError, error, refetch } = useTournaments();
+  const list = isApiConfigured() ? data : MOCK_TOURNAMENTS;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isApiConfigured()) return;
+      void queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+    }, [queryClient])
+  );
 
   return (
     <View style={styles.root}>
@@ -26,8 +37,15 @@ export default function TournamentsScreen() {
         <ScrollView contentContainerStyle={styles.scroll}>
           {isLoading ? (
             <ActivityIndicator color={colors.orange} />
-          ) : (
-            list?.map((t, i) => (
+          ) : isError ? (
+            <GlassCard>
+              <Text style={styles.errorText}>{(error as Error)?.message ?? 'Failed to load tournaments'}</Text>
+              <Pressable onPress={() => refetch()}>
+                <Text style={styles.retry}>Tap to retry</Text>
+              </Pressable>
+            </GlassCard>
+          ) : list?.length ? (
+            list.map((t, i) => (
               <Pressable key={t.id} onPress={() => router.push(`/tournament/${t.id}`)}>
                 <GlassCard delay={i * 50} style={{ marginBottom: 12 }}>
                   <Text style={styles.name}>{t.name}</Text>
@@ -43,6 +61,10 @@ export default function TournamentsScreen() {
                 </GlassCard>
               </Pressable>
             ))
+          ) : (
+            <GlassCard>
+              <Text style={styles.empty}>No tournaments yet. Create your first league!</Text>
+            </GlassCard>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -69,8 +91,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.surface,
     borderRadius: 8,
   },
   badgeOpen: { color: colors.green, backgroundColor: 'rgba(0,200,83,0.15)' },
+  empty: { color: colors.textMuted, textAlign: 'center' },
+  errorText: { color: colors.live, textAlign: 'center', marginBottom: 8 },
+  retry: { color: colors.orange, textAlign: 'center', fontWeight: '600' },
 });

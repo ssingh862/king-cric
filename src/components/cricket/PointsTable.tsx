@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
+    borderBottomColor: colors.cardBorder,
   },
   topRow: { backgroundColor: 'rgba(255,107,0,0.08)' },
   hdr: { flex: 1, color: colors.textDim, fontSize: 11, fontWeight: '600', textAlign: 'center' },
