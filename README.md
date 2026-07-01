@@ -79,6 +79,58 @@ npx expo start
 
 **Demo mode:** Without `EXPO_PUBLIC_API_URL` in `.env`, the app runs with mock data so you can preview the UI immediately.
 
+## Deploy API on Railway
+
+Railway should host **only the Node API** (`server/`). Run the Expo app on your phone/computer with `npx expo start`.
+
+### 1. Railway service settings
+
+| Setting | Value |
+|---------|--------|
+| **Root Directory** | `server` |
+| **Start command** | `npm start` (after build) |
+
+`server/railway.toml` is included — build runs `npm install && npm run build`.
+
+### 2. Environment variables (Railway → Variables)
+
+| Variable | Example |
+|----------|---------|
+| `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/king-cric` |
+| `JWT_SECRET` | long random string |
+| `CORS_ORIGIN` | `*` |
+
+Use [MongoDB Atlas](https://www.mongodb.com/atlas) free tier if you don't have MongoDB yet.  
+Railway sets `PORT` automatically — do **not** hardcode port `8081` in networking.
+
+### 3. Verify the API
+
+```bash
+curl https://YOUR-SERVICE.up.railway.app/health
+```
+
+Expected response:
+
+```json
+{"ok":true,"service":"king-cric-api","db":"connected"}
+```
+
+If you see Expo manifest JSON instead, you deployed the wrong folder — set Root Directory to `server`.
+
+### 4. Point the app at Railway
+
+In project root `.env`:
+
+```bash
+EXPO_PUBLIC_API_URL=https://YOUR-SERVICE.up.railway.app
+```
+
+Restart Expo:
+
+```bash
+npx expo start -c
+```
+
 ## API Endpoints
 
 | Method | Path | Description |

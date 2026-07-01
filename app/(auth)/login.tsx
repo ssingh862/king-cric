@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -17,7 +17,7 @@ import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientButton } from '../../src/components/ui/GradientButton';
 import { colors, radius, shadows } from '../../src/lib/theme';
-import { isApiConfigured } from '../../src/lib/api';
+import { isApiConfigured, checkApiHealth, API_URL } from '../../src/lib/api';
 import { useAuthStore } from '../../src/stores/authStore';
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
@@ -32,6 +32,14 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [apiStatus, setApiStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isApiConfigured()) return;
+    void checkApiHealth().then(({ ok, message }) => {
+      if (!ok) setApiStatus(message);
+    });
+  }, []);
 
   const resetMessages = () => {
     setError('');
@@ -148,6 +156,16 @@ export default function LoginScreen() {
                 </Text>
               </View>
             )}
+
+            {apiStatus ? (
+              <View style={styles.configWarning}>
+                <Ionicons name="cloud-offline-outline" size={18} color={colors.live} />
+                <Text style={styles.configWarningText}>
+                  {apiStatus}
+                  {'\n'}API: {API_URL}
+                </Text>
+              </View>
+            ) : null}
 
             <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.card}>
               <View style={styles.modeTabs}>

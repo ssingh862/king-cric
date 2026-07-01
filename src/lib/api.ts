@@ -8,6 +8,28 @@ export function isApiConfigured(): boolean {
   return Boolean(url && url.length > 0 && !url.includes('your-api'));
 }
 
+/** Verify the URL points to KingCric API (not Expo Metro by mistake). */
+export async function checkApiHealth(): Promise<{ ok: boolean; message: string }> {
+  if (!isApiConfigured()) {
+    return { ok: false, message: 'EXPO_PUBLIC_API_URL is not set in .env' };
+  }
+  try {
+    const res = await fetch(`${API_URL}/health`);
+    const body = (await res.json()) as { ok?: boolean; service?: string; db?: string };
+    if (body.service === 'king-cric-api') {
+      if (body.ok) return { ok: true, message: 'API connected' };
+      return { ok: false, message: 'API is up but MongoDB is not connected. Set MONGODB_URI on Railway.' };
+    }
+    return {
+      ok: false,
+      message:
+        'Wrong backend — Railway is running Expo, not the API. Set Root Directory to server/ and redeploy.',
+    };
+  } catch {
+    return { ok: false, message: `Cannot reach API at ${API_URL}` };
+  }
+}
+
 /** @deprecated use isApiConfigured */
 export const isSupabaseConfigured = isApiConfigured;
 

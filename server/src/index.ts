@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import os from 'os';
+import mongoose from 'mongoose';
 import { Server } from 'socket.io';
 import { config } from './config';
 import { connectDb } from './db';
@@ -23,7 +24,14 @@ async function main() {
   app.use(cors({ origin: config.corsOrigin === '*' ? true : config.corsOrigin }));
   app.use(express.json());
 
-  app.get('/health', (_req, res) => res.json({ ok: true }));
+  app.get('/health', async (_req, res) => {
+    const dbOk = mongoose.connection.readyState === 1;
+    res.json({
+      ok: dbOk,
+      service: 'king-cric-api',
+      db: dbOk ? 'connected' : 'disconnected',
+    });
+  });
 
   app.use('/auth', authRoutes);
   app.use('/tournaments', tournamentRoutes);
