@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import {
   Modal,
   Platform,
@@ -6,13 +7,13 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { Player } from '../../types/database';
-import { colors, radius, shadows } from '../../lib/theme';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { Player } from "../../types/database";
+import { colors, radius, shadows } from "../../lib/theme";
 
-export type PickerRole = 'striker' | 'non_striker' | 'bowler';
+export type PickerRole = "striker" | "non_striker" | "bowler";
 
 interface PlayerPickerModalProps {
   visible: boolean;
@@ -31,7 +32,7 @@ export function PlayerPickerModal({
   visible,
   title,
   subtitle,
-  icon = 'person',
+  icon = "person",
   players,
   selectedId,
   disabledIds = [],
@@ -40,16 +41,28 @@ export function PlayerPickerModal({
   required,
 }: PlayerPickerModalProps) {
   const insets = useSafeAreaInsets();
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const handleSelect = (p: Player) => {
     if (disabledIds.includes(p.id)) return;
+    setPendingId(p.id); // instant visual feedback, before async work resolves
     onSelect(p);
     if (!required) onClose?.();
   };
 
+  // clear the local optimistic pick whenever the modal opens fresh for a new prompt
+  const wasVisible = useRefLike(visible);
+  if (visible && !wasVisible.current && pendingId !== null) {
+    setPendingId(null);
+  }
+  wasVisible.current = visible;
+
   if (!visible) return null;
 
-  const available = players.filter((p) => !disabledIds.includes(p.id) || p.id === selectedId);
+  const available = players.filter(
+    (p) => !disabledIds.includes(p.id) || p.id === selectedId,
+  );
+  const effectiveSelectedId = pendingId ?? selectedId;
 
   return (
     <Modal
@@ -60,9 +73,16 @@ export function PlayerPickerModal({
       presentationStyle="overFullScreen"
       onRequestClose={required ? undefined : onClose}
     >
-      <Pressable style={styles.overlay} onPress={required ? undefined : onClose}>
+      <Pressable
+        style={styles.overlay}
+        onPress={required ? undefined : onClose}
+      >
         <Pressable
-          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }, shadows.cardLg]}
+          style={[
+            styles.sheet,
+            { paddingBottom: Math.max(insets.bottom, 20) },
+            shadows.cardLg,
+          ]}
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.handle} />
@@ -73,7 +93,9 @@ export function PlayerPickerModal({
             </View>
             <View style={styles.headerText}>
               <Text style={styles.title}>{title}</Text>
-              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              {subtitle ? (
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              ) : null}
             </View>
             {!required && onClose ? (
               <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
@@ -83,7 +105,9 @@ export function PlayerPickerModal({
           </View>
 
           <Text style={styles.count}>
-            {available.length} player{available.length !== 1 ? 's' : ''} — tap to select
+            {pendingId
+              ? "Setting…"
+              : `${available.length} player${available.length !== 1 ? "s" : ""} — tap to select`}
           </Text>
 
           <ScrollView
@@ -93,13 +117,16 @@ export function PlayerPickerModal({
             showsVerticalScrollIndicator={false}
           >
             {available.length === 0 ? (
-              <Text style={styles.empty}>No players available. Add squad members to the team first.</Text>
+              <Text style={styles.empty}>
+                No players available. Add squad members to the team first.
+              </Text>
             ) : (
               available.map((p) => (
                 <PlayerCard
                   key={p.id}
                   player={p}
-                  selected={selectedId === p.id}
+                  selected={effectiveSelectedId === p.id}
+                  pending={pendingId === p.id}
                   disabled={disabledIds.includes(p.id) && selectedId !== p.id}
                   onPress={() => handleSelect(p)}
                 />
@@ -112,14 +139,21 @@ export function PlayerPickerModal({
   );
 }
 
+function useRefLike(initial: boolean) {
+  const ref = useRef(initial);
+  return ref;
+}
+
 function PlayerCard({
   player,
   selected,
+  pending,
   disabled,
   onPress,
 }: {
   player: Player;
   selected: boolean;
+  pending?: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
@@ -133,28 +167,41 @@ function PlayerCard({
         disabled && styles.cardDisabled,
       ]}
       onPress={disabled ? undefined : onPress}
-      disabled={disabled}
+      disabled={disabled || pending}
     >
       {player.jersey_number != null ? (
         <View style={[styles.jerseyBadge, selected && styles.jerseyBadgeOn]}>
-          <Text style={[styles.jerseyBadgeText, selected && styles.jerseyBadgeTextOn]}>
+          <Text
+            style={[
+              styles.jerseyBadgeText,
+              selected && styles.jerseyBadgeTextOn,
+            ]}
+          >
             {player.jersey_number}
           </Text>
         </View>
       ) : null}
 
       <View style={[styles.avatar, selected && styles.avatarOn]}>
-        <Text style={[styles.avatarText, selected && styles.avatarTextOn]}>{initial}</Text>
+        <Text style={[styles.avatarText, selected && styles.avatarTextOn]}>
+          {initial}
+        </Text>
       </View>
 
       <View style={styles.cardBody}>
         <Text
-          style={[styles.name, selected && styles.nameOn, disabled && styles.nameDisabled]}
+          style={[
+            styles.name,
+            selected && styles.nameOn,
+            disabled && styles.nameDisabled,
+          ]}
           numberOfLines={1}
         >
           {player.full_name}
         </Text>
-        {disabled ? (
+        {pending ? (
+          <Text style={styles.pendingLabel}>Setting as bowler…</Text>
+        ) : disabled ? (
           <Text style={styles.taken}>Already selected</Text>
         ) : player.jersey_number != null ? (
           <Text style={styles.jerseyLabel}>Jersey #{player.jersey_number}</Text>
@@ -176,14 +223,14 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     ...Platform.select({ android: { elevation: 24 }, ios: {} }),
   },
   sheet: {
     backgroundColor: colors.backgroundSecondary,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '88%',
+    maxHeight: "88%",
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderBottomWidth: 0,
@@ -193,13 +240,13 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.borderStrong,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: 10,
     marginBottom: 6,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
     gap: 12,
@@ -211,8 +258,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.orangeLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerText: { flex: 1 },
   closeBtn: {
@@ -220,27 +267,32 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  title: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  title: { color: colors.text, fontSize: 18, fontWeight: "800" },
   subtitle: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
   count: {
     color: colors.textMuted,
     fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
     letterSpacing: 0.4,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 6,
   },
-  empty: { color: colors.textMuted, textAlign: 'center', padding: 24, fontSize: 14 },
+  empty: {
+    color: colors.textMuted,
+    textAlign: "center",
+    padding: 24,
+    fontSize: 14,
+  },
   list: { maxHeight: 440 },
   listContent: { paddingHorizontal: 16, paddingBottom: 16 },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 14,
     paddingTop: 16,
@@ -250,8 +302,8 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     backgroundColor: colors.card,
     gap: 12,
-    position: 'relative',
-    overflow: 'visible',
+    position: "relative",
+    overflow: "visible",
   },
   cardOn: {
     borderColor: colors.orange,
@@ -262,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   jerseyBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -1,
     right: -1,
     minWidth: 28,
@@ -273,8 +325,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
   jerseyBadgeOn: {
@@ -284,18 +336,18 @@ const styles = StyleSheet.create({
   jerseyBadgeText: {
     color: colors.textMuted,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   jerseyBadgeTextOn: {
-    color: '#fff',
+    color: "#fff",
   },
   avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.cardBorder,
     flexShrink: 0,
@@ -304,22 +356,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.orange,
     borderColor: colors.orange,
   },
-  avatarText: { color: colors.orange, fontSize: 17, fontWeight: '800' },
-  avatarTextOn: { color: '#fff' },
+  avatarText: { color: colors.orange, fontSize: 17, fontWeight: "800" },
+  avatarTextOn: { color: "#fff" },
   cardBody: {
     flex: 1,
     minWidth: 0,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   name: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   nameOn: { color: colors.orange },
   nameDisabled: { color: colors.textDim },
+  pendingLabel: {
+    color: colors.orange,
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: "700",
+  },
   jerseyLabel: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  taken: { color: colors.live, fontSize: 11, marginTop: 2, fontWeight: '600' },
+  taken: { color: colors.live, fontSize: 11, marginTop: 2, fontWeight: "600" },
   radio: {
     width: 22,
     height: 22,

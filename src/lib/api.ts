@@ -1,11 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+function resolveApiUrl(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+  if (fromEnv && fromEnv.length > 0 && !fromEnv.includes('your-api')) {
+    return fromEnv.replace(/\/$/, '').replace(/\/health$/, '');
+  }
+  const fromExtra = Constants.expoConfig?.extra?.apiUrl as string | undefined;
+  if (fromExtra && fromExtra.length > 0) {
+    return fromExtra.replace(/\/$/, '').replace(/\/health$/, '');
+  }
+  return 'http://localhost:3000';
+}
+
+export const API_URL = resolveApiUrl();
 const TOKEN_KEY = 'auth_token';
 
 export function isApiConfigured(): boolean {
-  const url = process.env.EXPO_PUBLIC_API_URL ?? '';
-  return Boolean(url && url.length > 0 && !url.includes('your-api'));
+  const url = resolveApiUrl();
+  return url.length > 0 && !url.includes('your-api') && url !== 'http://localhost:3000';
 }
 
 /** Verify the URL points to KingCric API (not Expo Metro by mistake). */

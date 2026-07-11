@@ -1,9 +1,13 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { ScoreEvent } from '../../types/database';
-import { battingStatsForDisplay, bowlingStatsForDisplay } from '../../lib/playerStats';
-import { dedupeScoreEvents } from '../../lib/scoring';
-import { colors, radius } from '../../lib/theme';
+import { useMemo } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import type { ScoreEvent } from "../../types/database";
+import {
+  battingStatsForDisplay,
+  bowlingStatsForDisplay,
+} from "../../lib/playerStats";
+import { dedupeScoreEvents } from "../../lib/scoring";
+import { colors, radius } from "../../lib/theme";
 
 interface MatchPlayerStatsProps {
   events: ScoreEvent[];
@@ -17,23 +21,23 @@ interface MatchPlayerStatsProps {
 type ColDef = { label: string; width: number };
 
 const BATTING_COLS: ColDef[] = [
-  { label: 'Batsman', width: 108 },
-  { label: 'Score', width: 64 },
-  { label: '4s', width: 28 },
-  { label: '6s', width: 28 },
-  { label: 'SR', width: 56 },
-  { label: '', width: 32 },
+  { label: "Batsman", width: 108 },
+  { label: "Score", width: 64 },
+  { label: "4s", width: 28 },
+  { label: "6s", width: 28 },
+  { label: "SR", width: 56 },
+  { label: "", width: 32 },
 ];
 
 const BOWLING_COLS: ColDef[] = [
-  { label: 'Bowler', width: 88 },
-  { label: 'O', width: 40 },
-  { label: 'M', width: 28 },
-  { label: 'R', width: 32 },
-  { label: 'W', width: 28 },
-  { label: 'Econ', width: 44 },
-  { label: 'Wd', width: 28 },
-  { label: 'Nb', width: 28 },
+  { label: "Bowler", width: 88 },
+  { label: "O", width: 40 },
+  { label: "M", width: 28 },
+  { label: "R", width: 32 },
+  { label: "W", width: 28 },
+  { label: "Econ", width: 44 },
+  { label: "Wd", width: 28 },
+  { label: "Nb", width: 28 },
 ];
 
 function tableWidth(cols: ColDef[]) {
@@ -102,8 +106,16 @@ function BatsmanCell({
       ) : (
         <View style={styles.batSpacer} />
       )}
-      <Text style={[styles.cell, styles.cellBold, styles.cellLeft, styles.batsmanName]} numberOfLines={1}>
-        {`${name}${isOut ? '' : ' *'}`}
+      <Text
+        style={[
+          styles.cell,
+          styles.cellBold,
+          styles.cellLeft,
+          styles.batsmanName,
+        ]}
+        numberOfLines={1}
+      >
+        {`${name}${isOut ? "" : " *"}`}
       </Text>
     </View>
   );
@@ -118,13 +130,32 @@ export function MatchPlayerStats({
   bowlerId,
 }: MatchPlayerStatsProps) {
   const uniqueEvents = dedupeScoreEvents(events);
-  const batters = battingStatsForDisplay(uniqueEvents, { strikerId, nonStrikerId });
-  const bowlers = bowlingStatsForDisplay(uniqueEvents, bowlerId);
-
+  const batters = battingStatsForDisplay(uniqueEvents, {
+    strikerId,
+    nonStrikerId,
+  });
+  const bowlersRaw = bowlingStatsForDisplay(uniqueEvents, bowlerId);
+  const bowlers = useMemo(() => {
+    if (!bowlerId) return bowlersRaw;
+    if (bowlersRaw.some((b) => b.playerId === bowlerId)) return bowlersRaw;
+    return [
+      ...bowlersRaw,
+      {
+        playerId: bowlerId,
+        overs: "0.0",
+        maidens: 0,
+        runs: 0,
+        wickets: 0,
+        economy: "0.00",
+        wides: 0,
+        noBalls: 0,
+      },
+    ];
+  }, [bowlersRaw, bowlerId]);
   const hasCrease = !!(strikerId || nonStrikerId || bowlerId);
   if (!uniqueEvents.length && !hasCrease) return null;
 
-  const name = (id: string) => playerNames.get(id) ?? 'Player';
+  const name = (id: string) => playerNames.get(id) ?? "Player";
 
   return (
     <View style={styles.wrap}>
@@ -148,9 +179,7 @@ export function MatchPlayerStats({
               <Cell width={BATTING_COLS[2].width}>{String(b.fours)}</Cell>
               <Cell width={BATTING_COLS[3].width}>{String(b.sixes)}</Cell>
               <Cell width={BATTING_COLS[4].width}>{b.strikeRate}</Cell>
-              <Cell width={BATTING_COLS[5].width}>
-                {b.isOut ? 'out' : ''}
-              </Cell>
+              <Cell width={BATTING_COLS[5].width}>{b.isOut ? "out" : ""}</Cell>
             </View>
           ))}
         </View>
@@ -195,18 +224,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  title: { color: colors.orange, fontSize: 14, fontWeight: '700', marginBottom: 12 },
-  section: { color: colors.text, fontSize: 15, fontWeight: '800', marginBottom: 10 },
+  title: {
+    color: colors.orange,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  section: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
   headerRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
     paddingBottom: 8,
     marginBottom: 4,
   },
   dataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.cardBorder,
@@ -214,19 +253,19 @@ const styles = StyleSheet.create({
   headerCell: {
     color: colors.textDim,
     fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
   },
   cell: {
     color: colors.textMuted,
     fontSize: 13,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  cellBold: { color: colors.text, fontWeight: '700' },
-  cellLeft: { textAlign: 'left' },
+  cellBold: { color: colors.text, fontWeight: "700" },
+  cellLeft: { textAlign: "left" },
   batsmanCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     paddingRight: 4,
   },
@@ -235,8 +274,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     backgroundColor: colors.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0,
   },
   batSpacer: { width: 20, flexShrink: 0 },
