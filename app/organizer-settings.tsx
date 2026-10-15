@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, Pressable, Share, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +6,7 @@ import { api } from '../src/lib/api';
 import { Alert, Text } from '../src/i18n';
 import { colors, createThemedStyles } from '../src/lib/theme';
 import { Page, Card, Field, Button, LinkRow, styles } from '../src/components/settings/SettingsUI';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 interface Tournament {
   id: string;
@@ -18,6 +18,7 @@ interface Tournament {
   points_tie: number;
   points_loss: number;
   points_no_result: number;
+  status?: string;
   registration_deadline: string | null;
   settings?: { archived?: boolean };
 }
@@ -50,6 +51,7 @@ export default function OrganizerSettings() {
   const [deadline, setDeadline] = useState('');
   const [noResult, setNoResult] = useState('1');
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState('');
   const list = useQuery({ queryKey: ['settings-tournaments'], queryFn: () => api<Tournament[]>('/settings/tournaments') });
   const detail = useQuery({
@@ -85,6 +87,17 @@ export default function OrganizerSettings() {
 
   const mutate = (path: string, data: unknown, method = 'POST') => api(`/settings/tournaments/${selected}${path}`, { method, body: JSON.stringify(data) });
 
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([list.refetch(), selected ? detail.refetch() : Promise.resolve()]);
+    setRefreshing(false);
+  }, [list.refetch, detail.refetch, selected]);
+
+  useFocusEffect(useCallback(() => {
+    void list.refetch();
+    if (selected) void detail.refetch();
+  }, [list.refetch, detail.refetch, selected]));
+
   async function exportData() {
     const data = await api(`/settings/tournaments/${selected}/export`);
     const json = JSON.stringify(data, null, 2);
@@ -103,7 +116,7 @@ export default function OrganizerSettings() {
   const data = detail.data;
 
   return (
-    <Page title="Tournament management">
+    <Page title="Tournament management" refreshing={refreshing} onRefresh={() => void refresh()}>
       {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
       <Card title="My Tournaments">
         {list.isPending ? <Text style={styles.sub}>Loading…</Text> : list.isError ? (
@@ -113,7 +126,7 @@ export default function OrganizerSettings() {
           </>
         ) : list.data?.length ? list.data.map((item) => {
           const on = item.id === selected;
-          const meta = [item.city, item.format].filter(Boolean).join(' · ');
+          const meta = [item.city, item.format, item.status].filter(Boolean).join(' · ');
           return (
             <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item.id)} style={[ui.pick, on && ui.pickOn]}>
               <Logo uri={item.logo_url} />
@@ -167,13 +180,19 @@ export default function OrganizerSettings() {
             ))}
           </Card>
           <Card title="Teams">
-            <Text style={styles.sub}>Add a team to this tournament. It is approved right away. Remove deletes the team before a match goes live. It does not leave the team pending.</Text>
-            <Field label="Team name" value={teamName} onChange={setTeamName} />
-            <Button title="Add team" busy={busy} onPress={() => void run(async () => {
-              if (!teamName.trim()) throw new Error('Enter the team name');
-              await api('/teams/register', { method: 'POST', body: JSON.stringify({ tournament_id: selected, team_name: teamName.trim() }) });
-              setTeamName('');
-            })} />
+            {['draft', 'registration'].includes(data.tournament.status ?? '') ? (
+              <>
+                <Text style={styles.sub}>Registration is open, so you can add a team even if other matches are already live. Set the tournament to ongoing again when you are finished.</Text>
+                <Field label="Team name" value={teamName} onChange={setTeamName} />
+                <Button title="Add team" busy={busy} onPress={() => void run(async () => {
+                  if (!teamName.trim()) throw new Error('Enter the team name');
+                  await api('/teams/register', { method: 'POST', body: JSON.stringify({ tournament_id: selected, team_name: teamName.trim() }) });
+                  setTeamName('');
+                })} />
+              </>
+            ) : (
+              <Text style={styles.sub}>Set this tournament to registration before adding another team. You can set it back to ongoing after the team is added.</Text>
+            )}
             {data.teams.length ? data.teams.map((team) => (
               <View key={team.id} style={ui.person}>
                 <View style={{ flex: 1 }}>

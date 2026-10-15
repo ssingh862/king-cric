@@ -26,7 +26,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === '(auth)';
-    if (!isAuthenticated && !inAuth && segments[0] !== 'rules') {
+    if (!isAuthenticated && !inAuth && segments[0] !== 'rules' && segments[0] !== 'play') {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuth) {
       router.replace('/(tabs)');

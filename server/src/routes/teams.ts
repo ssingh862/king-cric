@@ -102,7 +102,7 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
   const tournament = await Tournament.findById(tournament_id);
   if (!tournament || tournament.settings?.archived) { res.status(400).json({error:'Registration is closed'}); return; }
   const organizer = String(tournament.organizer_id) === req.userId;
-  if (!organizer && !['registration','draft'].includes(tournament.status)) { res.status(400).json({error:'Registration is closed'}); return; }
+  if (!['registration','draft'].includes(tournament.status)) { res.status(400).json({error:'Set the tournament to registration before adding a team.'}); return; }
   if (!organizer && tournament.registration_deadline && tournament.registration_deadline < new Date()) { res.status(400).json({error:'Registration deadline has passed'}); return; }
   if (await Team.countDocuments({tournament_id}) >= tournament.max_teams) { res.status(400).json({error:'Tournament team limit reached'}); return; }
   const name = team_name.trim();

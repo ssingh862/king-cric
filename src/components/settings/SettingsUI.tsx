@@ -2,7 +2,7 @@ import { TextInput } from '../../i18n';
 import { colors, createThemedStyles, shadows } from '../../lib/theme';
 import type { ReactNode } from 'react';
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, RefreshControl, View } from 'react-native';
 import { KeyboardForm } from '../ui/KeyboardForm';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -59,11 +59,14 @@ export const styles = createThemedStyles({
   choiceOn: { borderColor: colors.orange, backgroundColor: colors.orangeLight },
 });
 
-export function Page({ title, children, onBack }: { title: string; children: ReactNode; onBack?: () => void }) {
+export function Page({ title, children, onBack, refreshing, onRefresh }: { title: string; children: ReactNode; onBack?: () => void; refreshing?: boolean; onRefresh?: () => void }) {
   const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.page}>
-      <KeyboardForm contentContainerStyle={styles.scroll}>
+      <KeyboardForm
+        contentContainerStyle={styles.scroll}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={colors.orange} /> : undefined}
+      >
         <View style={styles.header}>
           <Pressable accessibilityLabel={t('Back')} style={styles.back} onPress={() => onBack ? onBack() : router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />

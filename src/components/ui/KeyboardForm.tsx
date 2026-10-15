@@ -6,6 +6,7 @@ import {
   Platform,
   ScrollView,
   TextInput,
+  type ReactElement,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface KeyboardFormProps {
   children: ReactNode;
   contentContainerStyle?: ViewStyle;
+  refreshControl?: ReactElement;
 }
 
 type KeyboardScroller = {
@@ -41,7 +43,7 @@ function scrollFocusedField(scroll: ScrollView | null) {
 }
 
 /** Scrollable form that keeps the focused field above the keyboard. */
-export function KeyboardForm({ children, contentContainerStyle }: KeyboardFormProps) {
+export function KeyboardForm({ children, contentContainerStyle, refreshControl }: KeyboardFormProps) {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const bindScroll = (node: ScrollView | null) => {
@@ -66,6 +68,7 @@ export function KeyboardForm({ children, contentContainerStyle }: KeyboardFormPr
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
       automaticallyAdjustKeyboardInsets
       contentContainerStyle={[
         styles.content,

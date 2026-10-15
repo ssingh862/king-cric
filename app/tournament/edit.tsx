@@ -120,6 +120,8 @@ export default function EditTournamentScreen() {
 
     await queryClient.invalidateQueries({ queryKey: ['tournament', id] });
     await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+    await queryClient.invalidateQueries({ queryKey: ['tournament-settings', id] });
+    await queryClient.invalidateQueries({ queryKey: ['settings-tournaments'] });
 
     Alert.alert('Saved', 'Tournament updated successfully.', [
       { text: 'OK', onPress: () => router.back() },

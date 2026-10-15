@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PointsTable } from '../../src/components/cricket/PointsTable';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GradientButton } from '../../src/components/ui/GradientButton';
-import { usePointsTable, useTournament, useTournamentTeams } from '../../src/hooks/useTournaments';
+import { useMyTeams, usePointsTable, useTournament, useTournamentTeams } from '../../src/hooks/useTournaments';
 import { useTournamentMatches } from '../../src/hooks/useMatchScoring';
 import { MOCK_TOURNAMENTS } from '../../src/lib/mockData';
 import { deleteMatch } from '../../src/lib/matches';
@@ -46,6 +46,7 @@ export default function TournamentScreen() {
   const { data: tournament, isLoading } = useTournament(id ?? '');
   const { data: points } = usePointsTable(id ?? '');
   const { data: teams } = useTournamentTeams(id ?? '');
+  const { data: myTeams } = useMyTeams(profile?.id);
   const { data: matches } = useTournamentMatches(id ?? '');
   const leaders = useQuery({
     queryKey: ['leaders', id],
@@ -65,6 +66,10 @@ export default function TournamentScreen() {
   const t = tournament ?? (isApiConfigured() ? null : MOCK_TOURNAMENTS.find((x) => x.id === id) ?? MOCK_TOURNAMENTS[0]);
   const table = isApiConfigured() ? points : DEMO_POINTS;
   const canManage = canManageTournament(tournament ?? null, profile);
+  const matchStarted = (matches ?? []).some((m) => m.status !== 'scheduled');
+  const registrationOpen = !!t && ['draft', 'registration'].includes(t.status);
+  const joinOpen = registrationOpen && !matchStarted;
+  const mySquad = (myTeams ?? []).find((team) => team.tournament_id === id && team.captain_id === profile?.id);
 
   useFocusEffect(
     useCallback(() => {
@@ -188,16 +193,39 @@ export default function TournamentScreen() {
             </View>
 
             {!canManage && isApiConfigured() ? (
-              <GlassCard style={{ marginBottom: 20 }}>
-                <Text style={styles.viewerHint}>
-                  Scores and points are public. To play as captain, create your team first. The organizer then invites that team into this tournament.
-                </Text>
-                <GradientButton
-                  title="Create team"
-                  onPress={() => router.push('/clubs' as never)}
-                  style={{ marginTop: 16 }}
-                />
-              </GlassCard>
+              mySquad ? (
+                <GlassCard style={{ marginBottom: 20 }}>
+                  <Text style={styles.viewerHint}>Your team is registered in this league.</Text>
+                  <GradientButton
+                    title="View your team"
+                    onPress={() => router.push(`/team/${mySquad.id}`)}
+                    style={{ marginTop: 16 }}
+                  />
+                </GlassCard>
+              ) : joinOpen ? (
+                <GlassCard style={{ marginBottom: 20 }}>
+                  <Text style={styles.viewerHint}>
+                    This league is open. Create your team, then contact the organizer to add it.
+                  </Text>
+                  {t.organizer_name ? <Text style={styles.viewerHint}>Organizer: {t.organizer_name}</Text> : null}
+                  {t.organizer_phone ? (
+                    <Pressable onPress={() => Linking.openURL(`tel:${t.organizer_phone}`)}>
+                      <Text style={styles.phone}>{t.organizer_phone}</Text>
+                    </Pressable>
+                  ) : null}
+                  <GradientButton
+                    title="Create team"
+                    onPress={() => router.push('/clubs' as never)}
+                    style={{ marginTop: 16 }}
+                  />
+                </GlassCard>
+              ) : (
+                <GlassCard style={{ marginBottom: 20 }}>
+                  <Text style={styles.viewerHint}>
+                    A match has gone live, so you can no longer create a team or send one to the organizer.
+                  </Text>
+                </GlassCard>
+              )
             ) : null}
 
             {teams && teams.length > 0 && (
@@ -353,13 +381,13 @@ export default function TournamentScreen() {
 
                 {activeMatches.length === 0 && completedMatches.length === 0 && (
                   <Text style={styles.noMatches}>
-                    {canManage
+                    {canManage && t.status !== 'completed'
                       ? 'No matches yet. Create one below.'
                       : 'No matches scheduled yet.'}
                   </Text>
                 )}
 
-                {canManage && (
+                {canManage && t.status !== 'completed' && (
                   <GradientButton
                     title="Create Match"
                     onPress={() =>
@@ -371,8 +399,8 @@ export default function TournamentScreen() {
               </>
             )}
 
-            {canManage && <GradientButton title="Add existing team" onPress={()=>router.push({pathname:'/tournament/add-team',params:{tournamentId:id}} as never)} style={{marginTop:20}}/>}
-            {canManage && (
+            {canManage && registrationOpen && <GradientButton title="Add existing team" onPress={()=>router.push({pathname:'/tournament/add-team',params:{tournamentId:id}} as never)} style={{marginTop:20}}/>}
+            {canManage && registrationOpen && (
               <GradientButton
                 title="Register Team"
                 onPress={() =>
@@ -384,7 +412,7 @@ export default function TournamentScreen() {
                 style={{ marginTop: 20 }}
               />
             )}
-            {canManage && (
+            {canManage && t.status !== 'completed' && (
               <GradientButton
                 title="Scorers, approvals & history"
                 variant="outline"
@@ -394,12 +422,14 @@ export default function TournamentScreen() {
                 style={{ marginTop: 12 }}
               />
             )}
-            <GradientButton
-              title="View all matches"
-              onPress={() => router.navigate('/(tabs)/live')}
-              variant="outline"
-              style={{ marginTop: 12 }}
-            />
+            {t.status !== 'completed' && (
+              <GradientButton
+                title="View all matches"
+                onPress={() => router.navigate('/(tabs)/live')}
+                variant="outline"
+                style={{ marginTop: 12 }}
+              />
+            )}
           </ScrollView>
         )}
       </SafeAreaView>
