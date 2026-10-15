@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { Server } from 'socket.io';
 import { config } from './config';
 import { connectDb } from './db';
+import settingsRoutes from './routes/settings';
 import authRoutes from './routes/auth';
 import tournamentRoutes from './routes/tournaments';
 import teamRoutes from './routes/teams';
@@ -22,7 +23,7 @@ async function main() {
   });
 
   app.use(cors({ origin: config.corsOrigin === '*' ? true : config.corsOrigin }));
-  app.use(express.json());
+  app.use(express.json({ limit: '2mb' }));
 
   app.get('/health', async (_req, res) => {
     const dbOk = mongoose.connection.readyState === 1;
@@ -34,6 +35,7 @@ async function main() {
   });
 
   app.use('/auth', authRoutes);
+  app.use('/settings', settingsRoutes);
   app.use('/tournaments', tournamentRoutes);
   app.use('/teams', teamRoutes);
   app.use('/players', playerRoutes);

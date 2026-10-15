@@ -95,10 +95,8 @@ export function applyNewBatsmanToCrease(
     nonStrikerId: string | null;
     bowlerId: string | null;
   }
-): { strikerId: string; nonStrikerId: string; bowlerId: string } | null {
+): { strikerId: string; nonStrikerId: string; bowlerId: string | null } | null {
   const { bowlerId } = crease;
-  if (!bowlerId) return null;
-
   const slot = vacantCreaseSlot(crease);
   if (slot === 'striker' && crease.nonStrikerId) {
     return { strikerId: newBatsmanId, nonStrikerId: crease.nonStrikerId, bowlerId };

@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { StyleSheet,  View } from 'react-native';
 import { LiveBadge } from '../ui/LiveBadge';
 import { formatOvers, runRate } from '../../lib/scoring';
 import type { MatchRules } from '../../lib/cricket/types';
@@ -82,41 +84,41 @@ export function ScoreboardHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.forest,
     borderRadius: radius.lg,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.forest,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: colors.orange,
+    borderLeftColor: colors.lime,
   },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  bowling: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  bowling: { color: '#B7CDBD', fontSize: 13, fontWeight: '500' },
   battingTeam: {
-    color: colors.textMuted,
+    color: '#B7CDBD',
     fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 1,
     fontWeight: '600',
   },
-  score: { color: colors.text, fontSize: 52, fontWeight: '800', marginTop: 4 },
-  wicketCap: { color: colors.textDim, fontSize: 12, fontWeight: '600', marginTop: 2 },
-  overs: { color: colors.orange, fontSize: 18, fontWeight: '700', marginTop: 4 },
+  score: { color: '#FFFFFF', fontSize: 52, fontWeight: '800', marginTop: 4 },
+  wicketCap: { color: '#B7CDBD', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  overs: { color: colors.lime, fontSize: 18, fontWeight: '700', marginTop: 4 },
   statsRow: { flexDirection: 'row', marginTop: 16, gap: 10 },
   stat: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: '#24513A',
     borderRadius: radius.md,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: '#38674C',
   },
-  statVal: { color: colors.text, fontWeight: '800', fontSize: 14 },
-  statLabel: { color: colors.textMuted, fontSize: 10, marginTop: 4, fontWeight: '600' },
+  statVal: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  statLabel: { color: '#B7CDBD', fontSize: 10, marginTop: 4, fontWeight: '600' },
   chaseMini: {
     color: colors.text,
     fontSize: 14,

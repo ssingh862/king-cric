@@ -1,16 +1,36 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+/** Phone cannot reach the computer via localhost. Use the Expo dev machine address. */
+function rewriteLocalhostForDevice(url: string): string {
+  if (Platform.OS === 'web') return url;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return url;
+
+  const hostUri = Constants.expoConfig?.hostUri;
+  const host = hostUri?.split(':')[0];
+  if (!host || host === 'localhost' || host === '127.0.0.1') return url;
+
+  parsed.hostname = host;
+  return parsed.toString().replace(/\/$/, '');
+}
 
 function resolveApiUrl(): string {
   const fromEnv = process.env.EXPO_PUBLIC_API_URL;
   if (fromEnv && fromEnv.length > 0 && !fromEnv.includes('your-api')) {
-    return fromEnv.replace(/\/$/, '').replace(/\/health$/, '');
+    return rewriteLocalhostForDevice(fromEnv.replace(/\/$/, '').replace(/\/health$/, ''));
   }
   const fromExtra = Constants.expoConfig?.extra?.apiUrl as string | undefined;
   if (fromExtra && fromExtra.length > 0) {
-    return fromExtra.replace(/\/$/, '').replace(/\/health$/, '');
+    return rewriteLocalhostForDevice(fromExtra.replace(/\/$/, '').replace(/\/health$/, ''));
   }
-  return 'http://localhost:3000';
+  return rewriteLocalhostForDevice('http://localhost:3000');
 }
 
 export const API_URL = resolveApiUrl();

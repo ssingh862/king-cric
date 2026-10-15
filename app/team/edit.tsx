@@ -1,7 +1,11 @@
+import { Alert, TextInput } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
+import { apiSafe } from '../../src/lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -178,13 +182,15 @@ export default function EditTeamScreen() {
             />
 
             <GradientButton title="Save Changes" onPress={handleSave} loading={saving} style={{ marginTop: 24 }} />
-          </KeyboardForm>
+
+          {canEdit && <Pressable disabled={saving} style={{padding:20,alignItems:'center',marginTop:18}} onPress={()=>Alert.alert('Delete team?', 'This deletes the team and its squad. Teams with matches must have those matches removed first.', [{text:'Keep team',style:'cancel'},{text:'Delete permanently',style:'destructive',onPress:async()=>{setSaving(true);const {error}=await apiSafe(`/teams/${id}`,{method:'DELETE'});setSaving(false);if(error){Alert.alert('Could not delete',error);return;}await queryClient.invalidateQueries();router.replace('/(tabs)/tournaments');}}])}><Text style={{color:colors.live,fontWeight:'700'}}>Delete team</Text></Pressable>}
+</KeyboardForm>
       </SafeAreaView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },

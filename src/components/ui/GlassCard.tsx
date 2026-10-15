@@ -1,3 +1,4 @@
+import { createThemedStyles } from '../../lib/theme';
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -21,7 +22,7 @@ export function GlassCard({ children, style, delay = 0, elevated = true }: Glass
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrapper: {
     borderRadius: radius.lg,
     overflow: 'hidden',

@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { StyleSheet,  View } from 'react-native';
 import type { Partnership } from '../../lib/cricket/types';
 import { colors, radius } from '../../lib/theme';
 
@@ -31,7 +33,7 @@ export function PartnershipPanel({ partnership, playerNames }: PartnershipPanelP
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginBottom: 12,
     padding: 12,

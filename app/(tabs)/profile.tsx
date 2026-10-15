@@ -1,7 +1,9 @@
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GradientButton } from '../../src/components/ui/GradientButton';
@@ -12,7 +14,7 @@ const MENU = [
   { icon: 'add-circle' as const, label: 'Create Tournament', route: '/tournament/create', color: colors.orange },
   { icon: 'trophy' as const, label: 'My Tournaments', route: '/(tabs)/tournaments', color: colors.gold },
   { icon: 'people' as const, label: 'My Teams', route: '/my-teams', color: colors.blue },
-  { icon: 'settings' as const, label: 'Settings', route: null, color: colors.textMuted },
+  { icon: 'settings' as const, label: 'Settings', route: '/settings', color: colors.textMuted },
 ];
 
 export default function ProfileScreen() {
@@ -23,11 +25,11 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.avatarWrap}>
-            <LinearGradient colors={[colors.orange, colors.purple]} style={styles.avatar}>
+            {profile?.avatar_url ? <Image source={{uri:profile.avatar_url}} style={styles.avatar}/> : <LinearGradient colors={[colors.orange, colors.purple]} style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {(profile?.full_name ?? 'U')[0].toUpperCase()}
               </Text>
-            </LinearGradient>
+            </LinearGradient>}
             <Text style={styles.name}>{profile?.full_name ?? 'Cricket Fan'}</Text>
             <Text style={styles.phone}>{userEmail ?? profile?.phone ?? '—'}</Text>
             <View style={styles.premiumBadge}>
@@ -57,7 +59,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 40 },

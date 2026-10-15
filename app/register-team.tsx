@@ -1,8 +1,11 @@
+import { Alert, TextInput } from '../src/i18n';
+import { createThemedStyles } from '../src/lib/theme';
+import { Text } from '../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View, ActivityIndicator } from 'react-native';
+import { Pressable, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   createEmptyPlayer,
@@ -162,7 +165,7 @@ export default function RegisterTeamScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },

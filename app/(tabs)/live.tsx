@@ -1,9 +1,13 @@
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet,  View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LiveMatchCard } from '../../src/components/cricket/LiveMatchCard';
+import { CompletedMatchRow } from '../../src/components/cricket/CompletedMatchRow';
+import { groupMatchesByDate, matchDayParts } from '../../src/lib/matchDays';
 import { useCompletedMatches, useLiveMatches, useUpcomingMatches } from '../../src/hooks/useTournaments';
 import { MOCK_LIVE_MATCHES } from '../../src/lib/mockData';
 import { isApiConfigured } from '../../src/lib/api';
@@ -12,11 +16,21 @@ import { colors } from '../../src/lib/theme';
 type MatchCard = {
   id: string;
   status: string;
+  scheduled_at?: string | null;
   result_summary?: string | null;
   team_a?: { id: string; name: string; short_name?: string | null };
   team_b?: { id: string; name: string; short_name?: string | null };
   tournament?: { name: string; city?: string | null };
 };
+
+function DayHeading({ day }: { day: string }) {
+  const parts = matchDayParts(day);
+  return (
+    <Text style={styles.dayTitle}>
+      {parts.prefix ? <>{parts.prefix}{' · '}{parts.date}</> : parts.date}
+    </Text>
+  );
+}
 
 export default function LiveScreen() {
   const queryClient = useQueryClient();
@@ -55,16 +69,21 @@ export default function LiveScreen() {
               )}
 
               <Text style={[styles.sectionTitle, styles.sectionGap]}>Upcoming</Text>
-              {upcomingMatches?.length ? (
-                upcomingMatches.map((m, i) => <LiveMatchCard key={m.id} match={m} index={i} />)
+              {upcomingMatches?.filter((m) => m.status !== 'live').length ? (
+                groupMatchesByDate(upcomingMatches.filter((m) => m.status !== 'live'), 'asc').map(([day, matches]) => (
+                  <View key={`up-${day}`}>
+                    <DayHeading day={day} />
+                    {matches.map((m, i) => <LiveMatchCard key={m.id} match={m} index={i} />)}
+                  </View>
+                ))
               ) : (
                 <Text style={styles.emptySection}>No scheduled matches yet</Text>
               )}
 
               <Text style={[styles.sectionTitle, styles.sectionGap]}>Completed</Text>
               {completedMatches?.length ? (
-                completedMatches.map((m, i) => (
-                  <LiveMatchCard key={m.id} match={m} index={i} />
+                [...completedMatches].sort((a, b) => new Date(b.scheduled_at ?? 0).getTime() - new Date(a.scheduled_at ?? 0).getTime()).map((m) => (
+                  <CompletedMatchRow key={m.id} match={m} />
                 ))
               ) : (
                 <Text style={styles.emptySection}>No completed matches yet</Text>
@@ -77,7 +96,7 @@ export default function LiveScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1, padding: 20 },
   title: { color: colors.text, fontSize: 28, fontWeight: '800' },
@@ -92,6 +111,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sectionGap: { marginTop: 28 },
+  dayTitle: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 8,
+    marginTop: 4,
+  },
   emptySection: {
     color: colors.textMuted,
     textAlign: 'center',

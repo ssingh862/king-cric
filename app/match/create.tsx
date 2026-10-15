@@ -1,8 +1,14 @@
+import { Alert, TextInput } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
+import { MatchRulesEditor, standardLocalRules } from '../../src/components/cricket/MatchRulesEditor';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardForm } from '../../src/components/ui/KeyboardForm';
 import { GradientButton } from '../../src/components/ui/GradientButton';
@@ -28,6 +34,10 @@ export default function CreateMatchScreen() {
   const [teamAId, setTeamAId] = useState<string | null>(null);
   const [teamBId, setTeamBId] = useState<string | null>(null);
   const [venue, setVenue] = useState('');
+  const [overs, setOvers] = useState('');
+  const [matchDate, setMatchDate] = useState(() => new Date());
+  const [showDate, setShowDate] = useState(false);
+  const [rules, setRules] = useState({...standardLocalRules,...useAuthStore.getState().profile?.preferences?.scoringDefaults});
   const [loading, setLoading] = useState(false);
 
   const canManage = canManageTournament(tournament ?? null, profile);
@@ -40,6 +50,12 @@ export default function CreateMatchScreen() {
     () => teamList.filter((t) => t.id !== teamAId),
     [teamList, teamAId]
   );
+
+  useEffect(() => {
+    if (tournament?.overs_per_innings != null) {
+      setOvers((current) => current || String(tournament.overs_per_innings));
+    }
+  }, [tournament?.overs_per_innings]);
 
   useEffect(() => {
     if (isLoading || !tournament || !profile) return;
@@ -65,13 +81,20 @@ export default function CreateMatchScreen() {
       Alert.alert('Invalid', 'Team A and Team B must be different.');
       return;
     }
+    const oversPerInnings = Number(overs);
+    if (!Number.isInteger(oversPerInnings) || oversPerInnings < 1 || oversPerInnings > 50) {
+      Alert.alert('Overs', 'Choose 1–50 overs for this match.');
+      return;
+    }
     setLoading(true);
     const { matchId, error } = await createMatch({
       tournamentId: tournamentId ?? '',
       teamAId,
       teamBId,
+      rules,
       venue: venue.trim() || undefined,
-      oversPerInnings: tournament?.overs_per_innings ?? 20,
+      scheduledAt: new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate(), 12, 0, 0).toISOString(),
+      oversPerInnings,
     });
     setLoading(false);
     if (error) {
@@ -156,12 +179,39 @@ export default function CreateMatchScreen() {
               ))
             )}
 
-            <View style={styles.formatBox}>
-              <Ionicons name="time-outline" size={18} color={colors.orange} />
-              <Text style={styles.formatText}>
-                {tournament?.format ?? 'T20'} · {tournament?.overs_per_innings ?? 20} overs per innings
-              </Text>
-            </View>
+            <Text style={styles.sectionTitle}>Overs per innings</Text>
+            <TextInput
+              style={styles.input}
+              accessibilityLabel="Overs per innings"
+              placeholder={String(tournament?.overs_per_innings ?? 20)}
+              placeholderTextColor={colors.textDim}
+              value={overs}
+              onChangeText={setOvers}
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+            <Text style={styles.oversHint}>
+              {tournament?.format ?? 'T20'} tournament default is {tournament?.overs_per_innings ?? 20}. Change it for this match only.
+            </Text>
+
+            <Text style={styles.sectionTitle}>Match date</Text>
+            <Pressable style={styles.input} onPress={() => setShowDate(true)}>
+              <Text style={{ color: colors.text, fontSize: 16 }}>{format(matchDate, 'EEE, d MMM yyyy')}</Text>
+            </Pressable>
+            {showDate ? (
+              <DateTimePicker
+                value={matchDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(_event, date) => {
+                  if (Platform.OS !== 'ios') setShowDate(false);
+                  if (date) setMatchDate(date);
+                }}
+              />
+            ) : null}
+            {Platform.OS === 'ios' && showDate ? (
+              <Pressable onPress={() => setShowDate(false)}><Text style={styles.oversHint}>Done</Text></Pressable>
+            ) : null}
 
             <Text style={styles.sectionTitle}>Venue (optional)</Text>
             <TextInput
@@ -171,6 +221,8 @@ export default function CreateMatchScreen() {
               value={venue}
               onChangeText={setVenue}
             />
+
+            <MatchRulesEditor value={rules} onChange={setRules} />
 
             <GradientButton
               title={loading ? 'Creating…' : 'Continue to Toss & Setup'}
@@ -246,7 +298,7 @@ function TeamCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   centered: { alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
@@ -341,6 +393,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(234, 88, 12, 0.2)',
   },
   formatText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  oversHint: { color: colors.textMuted, fontSize: 13, marginTop: 8, marginBottom: 8, lineHeight: 18 },
   input: {
     padding: 14,
     borderRadius: radius.md,

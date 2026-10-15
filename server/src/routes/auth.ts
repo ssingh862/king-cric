@@ -7,8 +7,8 @@ import { User, toApi } from '../models';
 
 const router = Router();
 
-function signToken(userId: string) {
-  return jwt.sign({ sub: userId }, config.jwtSecret, { expiresIn: '30d' });
+export function signToken(userId: string, version = 0) {
+  return jwt.sign({ sub: userId, ver: version }, config.jwtSecret, { expiresIn: '30d' });
 }
 
 function profileFromUser(user: InstanceType<typeof User>) {
@@ -36,6 +36,7 @@ router.post('/register', async (req, res) => {
     }
 
     const normalized = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) { res.status(400).json({ error: 'Enter a valid email address' }); return; }
     const existing = await User.findOne({ email: normalized });
     if (existing) {
       res.status(409).json({ error: 'An account with this email already exists' });
@@ -49,7 +50,7 @@ router.post('/register', async (req, res) => {
       full_name: full_name?.trim() || 'Cricket Fan',
     });
 
-    const token = signToken(String(user._id));
+    const token = signToken(String(user._id), user.token_version ?? 0);
     res.status(201).json({
       token,
       user: profileFromUser(user),
@@ -75,13 +76,14 @@ router.post('/login', async (req, res) => {
       return;
     }
 
+    if (user.suspended) { res.status(403).json({ error: 'This account is suspended. Contact support.' }); return; }
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       res.status(401).json({ error: 'Incorrect email or password' });
       return;
     }
 
-    const token = signToken(String(user._id));
+    const token = signToken(String(user._id), user.token_version ?? 0);
     res.json({
       token,
       user: profileFromUser(user),
@@ -102,7 +104,14 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
 });
 
 router.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
-  const allowed = ['full_name', 'phone', 'avatar_url', 'expo_push_token'] as const;
+  const allowed = ['full_name', 'phone', 'avatar_url', 'expo_push_token', 'city', 'playing_role', 'batting_style', 'bowling_style'] as const;
+  for (const key of allowed) {
+    const value = req.body[key];
+    const max = key === 'avatar_url' ? 900000 : 200;
+    if (value !== undefined && value !== null && (typeof value !== 'string' || value.length > max)) { res.status(400).json({error: 'Invalid profile field'}); return; }
+  }
+  if ('full_name' in req.body && !req.body.full_name?.trim()) { res.status(400).json({error: 'Name is required'}); return; }
+  if (req.body.avatar_url && !/^data:image\/(png|jpeg|webp);base64,/.test(req.body.avatar_url) && !/^https:\/\//.test(req.body.avatar_url)) { res.status(400).json({error: 'Invalid photo'}); return; }
   const updates: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in req.body) updates[key] = req.body[key];
@@ -118,7 +127,7 @@ router.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
 
 router.post('/forgot-password', async (req, res) => {
   // Password reset via email is not implemented in this self-hosted stack yet.
-  res.json({ message: 'If an account exists, reset instructions would be sent.' });
+  res.status(501).json({ error: 'Email password recovery is not configured yet. Contact your tournament administrator.' });
 });
 
 export default router;

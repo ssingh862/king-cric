@@ -1,8 +1,11 @@
+import { Alert } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PointsTable } from '../../src/components/cricket/PointsTable';
 import { GlassCard } from '../../src/components/ui/GlassCard';
@@ -13,9 +16,23 @@ import { MOCK_TOURNAMENTS } from '../../src/lib/mockData';
 import { deleteMatch } from '../../src/lib/matches';
 import { recalculateTournamentPoints } from '../../src/lib/pointsTable';
 import { canManageTournament } from '../../src/lib/permissions';
-import { isApiConfigured } from '../../src/lib/api';
+import { api, isApiConfigured } from '../../src/lib/api';
+import { ballTypeLabel, formatTournamentDate } from '../../src/lib/tournaments';
+import { groupMatchesByDate, matchDayParts } from '../../src/lib/matchDays';
+import { CompletedMatchRow } from '../../src/components/cricket/CompletedMatchRow';
 import { colors } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
+
+function DayLabel({ day }: { day: string }) {
+  const parts = matchDayParts(day);
+  return (
+    <Text style={styles.dayLabel}>
+      {parts.prefix ? <>{parts.prefix}{' · '}{parts.date}</> : parts.date}
+    </Text>
+  );
+}
+
+type Leader = { id: string; name: string; team: string; runs: number; strikeRate: string; wickets: number; economy: string };
 
 const DEMO_POINTS = [
   { id: '1', tournament_id: 'd', team_id: 't1', played: 4, won: 3, lost: 1, tied: 0, points: 6, net_run_rate: 1.245, team: { name: 'Mumbai Strikers' } },
@@ -30,6 +47,11 @@ export default function TournamentScreen() {
   const { data: points } = usePointsTable(id ?? '');
   const { data: teams } = useTournamentTeams(id ?? '');
   const { data: matches } = useTournamentMatches(id ?? '');
+  const leaders = useQuery({
+    queryKey: ['leaders', id],
+    enabled: !!id && isApiConfigured(),
+    queryFn: () => api<{ batting: Leader[]; bowling: Leader[]; awards: { batter: Leader | null; bowler: Leader | null; player: Leader | null } }>(`/tournaments/${id}/leaders`),
+  });
 
   const activeMatches = useMemo(
     () => (matches ?? []).filter((m) => m.status !== 'completed'),
@@ -123,10 +145,36 @@ export default function TournamentScreen() {
           </View>
         ) : (
           <ScrollView contentContainerStyle={styles.scroll}>
-            <Text style={styles.name}>{t.name}</Text>
-            <Text style={styles.meta}>
-              📍 {t.city ?? 'TBD'} • {t.format} • {t.overs_per_innings} overs • {t.venue ?? 'TBD'}
-            </Text>
+            <View style={styles.identity}>
+              {t.logo_url ? (
+                <Image source={{ uri: t.logo_url }} style={styles.logo} />
+              ) : (
+                <View style={styles.logoFallback}>
+                  <Ionicons name="trophy" size={28} color={colors.orange} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>{t.name}</Text>
+                <Text style={styles.meta}>
+                  {t.city ?? 'TBD'} • {t.format} • {t.overs_per_innings} overs
+                  {ballTypeLabel(t.ball_type) ? ` • ${ballTypeLabel(t.ball_type)} ball` : ''}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.details}>
+              <Text style={styles.detailLine}>{t.venue ?? 'Venue not set'}</Text>
+              {formatTournamentDate(t.start_date) ? (
+                <Text style={styles.detailLine}>{formatTournamentDate(t.start_date)}</Text>
+              ) : null}
+              {t.organizer_name ? (
+                <Text style={styles.detailLine}>Organizer: {t.organizer_name}</Text>
+              ) : null}
+              {t.organizer_phone ? (
+                <Pressable onPress={() => Linking.openURL(`tel:${t.organizer_phone}`)}>
+                  <Text style={styles.phone}>{t.organizer_phone}</Text>
+                </Pressable>
+              ) : null}
+            </View>
 
             <View style={styles.statsRow}>
               <GlassCard style={styles.statCard}>
@@ -175,12 +223,41 @@ export default function TournamentScreen() {
 
             <PointsTable rows={table ?? []} />
 
+            {leaders.data?.awards.player || leaders.data?.batting.length ? (
+              <>
+                <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>Awards</Text>
+                {([['Best batter', leaders.data?.awards.batter, 'runs'], ['Best bowler', leaders.data?.awards.bowler, 'wickets'], ['Best player', leaders.data?.awards.player, 'runs']] as const).map(([label, row]) => row ? (
+                  <Pressable key={label} onPress={() => router.push(`/player/${row.id}`)}>
+                    <GlassCard style={{ marginBottom: 8 }}>
+                      <Text style={styles.detailLine}>{label}</Text>
+                      <Text style={styles.teamName}>{row.name} · {row.team}</Text>
+                    </GlassCard>
+                  </Pressable>
+                ) : null)}
+                <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>Most runs</Text>
+                {leaders.data?.batting.slice(0, 5).map((row, index) => (
+                  <Pressable key={row.id} onPress={() => router.push(`/player/${row.id}`)}>
+                    <GlassCard style={{ marginBottom: 8 }}><Text style={styles.teamName}>{index + 1}. {row.name} · {row.runs} ({row.strikeRate})</Text></GlassCard>
+                  </Pressable>
+                ))}
+                <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>Most wickets</Text>
+                {leaders.data?.bowling.slice(0, 5).map((row, index) => (
+                  <Pressable key={row.id} onPress={() => router.push(`/player/${row.id}`)}>
+                    <GlassCard style={{ marginBottom: 8 }}><Text style={styles.teamName}>{index + 1}. {row.name} · {row.wickets} wkts ({row.economy})</Text></GlassCard>
+                  </Pressable>
+                ))}
+              </>
+            ) : null}
+
             {isApiConfigured() && (
               <>
                 {activeMatches.length > 0 && (
                   <>
                     <Text style={styles.sectionTitle}>Upcoming & live</Text>
-                    {activeMatches.map((m) => {
+                    {groupMatchesByDate(activeMatches, 'asc').map(([day, dayMatches]) => (
+                    <View key={`up-${day}`}>
+                    <DayLabel day={day} />
+                    {dayMatches.map((m) => {
                       const matchLabel = `${m.team_a?.short_name ?? m.team_a?.name} vs ${m.team_b?.short_name ?? m.team_b?.name}`;
                       const statusLabel =
                         m.status === 'live' ? 'Live' : m.status === 'scheduled' ? 'Scheduled' : m.status;
@@ -221,44 +298,21 @@ export default function TournamentScreen() {
                         </Pressable>
                       );
                     })}
+                    </View>
+                    ))}
                   </>
                 )}
 
                 {completedMatches.length > 0 && (
                   <>
                     <Text style={[styles.sectionTitle, styles.sectionTitleGap]}>Completed</Text>
-                    {completedMatches.map((m) => {
-                      const matchLabel = `${m.team_a?.short_name ?? m.team_a?.name} vs ${m.team_b?.short_name ?? m.team_b?.name}`;
-                      return (
-                        <Pressable
-                          key={m.id}
-                          onPress={() => router.push(`/match/${m.id}`)}
-                          onLongPress={
-                            canManage
-                              ? () => confirmDeleteMatch(m.id, matchLabel)
-                              : undefined
-                          }
-                        >
-                          <GlassCard style={styles.completedCard}>
-                            <View style={styles.teamRow}>
-                              <Text style={styles.teamName}>{matchLabel}</Text>
-                              <View style={styles.matchMeta}>
-                                <View style={styles.completedPill}>
-                                  <Ionicons name="checkmark-circle" size={14} color={colors.gold} />
-                                  <Text style={styles.completedPillText}>Completed</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-                              </View>
-                            </View>
-                            {m.result_summary ? (
-                              <Text style={styles.matchResult} numberOfLines={2}>
-                                {m.result_summary}
-                              </Text>
-                            ) : null}
-                          </GlassCard>
-                        </Pressable>
-                      );
-                    })}
+                    {[...completedMatches].sort((a, b) => new Date(b.scheduled_at ?? 0).getTime() - new Date(a.scheduled_at ?? 0).getTime()).map((m) => (
+                      <CompletedMatchRow
+                        key={m.id}
+                        match={m}
+                        onLongPress={canManage ? () => confirmDeleteMatch(m.id, `${m.team_a?.short_name ?? m.team_a?.name} vs ${m.team_b?.short_name ?? m.team_b?.name}`) : undefined}
+                      />
+                    ))}
                   </>
                 )}
 
@@ -294,6 +348,16 @@ export default function TournamentScreen() {
                 style={{ marginTop: 20 }}
               />
             )}
+            {canManage && (
+              <GradientButton
+                title="Scorers, approvals & history"
+                variant="outline"
+                onPress={() =>
+                  router.push({ pathname: '/organizer-settings', params: { id: id ?? '' } })
+                }
+                style={{ marginTop: 12 }}
+              />
+            )}
             <GradientButton
               title="View all matches"
               onPress={() => router.push('/(tabs)/live')}
@@ -307,7 +371,7 @@ export default function TournamentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   topBar: {
@@ -321,14 +385,28 @@ const styles = StyleSheet.create({
   editText: { color: colors.orange, fontWeight: '600' },
   scroll: { padding: 20, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
-  name: { color: colors.text, fontSize: 28, fontWeight: '800' },
-  meta: { color: colors.textMuted, marginTop: 8, marginBottom: 24 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
+  logo: { width: 72, height: 72, borderRadius: 16 },
+  logoFallback: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: colors.orangeLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: { color: colors.text, fontSize: 24, fontWeight: '800' },
+  meta: { color: colors.textMuted, marginTop: 6 },
+  details: { marginBottom: 20 },
+  detailLine: { color: colors.textMuted, fontSize: 14, marginTop: 4 },
+  phone: { color: colors.orange, fontSize: 15, fontWeight: '700', marginTop: 6 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   statCard: { flex: 1, alignItems: 'center' },
   statVal: { color: colors.orange, fontSize: 22, fontWeight: '800', textTransform: 'capitalize' },
   statLabel: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 12 },
   sectionTitleGap: { marginTop: 20 },
+  dayLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '800', marginBottom: 8 },
   teamRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   teamDot: { width: 10, height: 10, borderRadius: 5 },
   teamName: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '600' },

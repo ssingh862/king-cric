@@ -1,17 +1,19 @@
+import { Alert } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
-} from "react-native";
+} from 'react-native';
 import { useQueryClient } from "@tanstack/react-query";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LiveBadge } from "../../src/components/ui/LiveBadge";
@@ -19,6 +21,7 @@ import {
   MatchCompleteCard,
   type TeamInningsSummary,
 } from "../../src/components/cricket/MatchCompleteCard";
+import { BallByBall } from "../../src/components/cricket/BallByBall";
 import { MatchResultModal } from "../../src/components/cricket/MatchResultModal";
 import { useMatch } from "../../src/hooks/useTournaments";
 import {
@@ -39,7 +42,7 @@ import {
   deleteMatch,
   fetchActiveInnings,
 } from "../../src/lib/matches";
-import { canManageTournament } from "../../src/lib/permissions";
+import { canManageTournament, canScoreTournament } from "../../src/lib/permissions";
 import { isApiConfigured } from "../../src/lib/api";
 import { useAuthStore } from "../../src/stores/authStore";
 import type { Innings } from "../../src/types/database";
@@ -374,6 +377,7 @@ export default function MatchScreen() {
   const hasInnings = (allInnings?.length ?? 0) > 0;
   const canSetup = match?.status !== "completed" && !hasInnings;
   const canOrganize = canManageTournament(match?.tournament ?? null, profile);
+  const canScore = canScoreTournament(match?.tournament, profile);
   const canDelete = isApiConfigured() && canOrganize;
   const showLive =
     !isMatchComplete && (match?.status === "live" || !!activeInnings);
@@ -434,6 +438,9 @@ export default function MatchScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
           <View style={styles.topRightActions}>
+            <Pressable style={styles.deleteBtn} onPress={() => router.push({ pathname: '/match/settings', params: { matchId: id } })}>
+              <Ionicons name="options-outline" size={22} color={colors.orange}/><Text style={{color:colors.orange,fontWeight:'700'}}>Rules & settings</Text>
+            </Pressable>
             {canDelete && (
               <Pressable style={styles.deleteBtn} onPress={confirmDeleteMatch}>
                 <Ionicons name="trash-outline" size={22} color={colors.live} />
@@ -585,7 +592,7 @@ export default function MatchScreen() {
           ) : null}
 
           <View style={styles.actions}>
-            {canOrganize && canSetup && (
+            {canScore && canSetup && (
               <Pressable
                 style={styles.scoreBtn}
                 onPress={() =>
@@ -605,7 +612,7 @@ export default function MatchScreen() {
               </Pressable>
             )}
 
-            {canOrganize &&
+            {canScore &&
               firstInnings?.status === "completed" &&
               !secondInnings &&
               match?.status !== "completed" && (
@@ -632,7 +639,9 @@ export default function MatchScreen() {
                 </Pressable>
               )}
 
-            {canOrganize && activeInnings && !isMatchComplete && (
+            {id && hasInnings ? <BallByBall matchId={id} teamAId={match?.team_a_id} teamBId={match?.team_b_id} /> : null}
+
+            {canScore && activeInnings && !isMatchComplete && (
               <Pressable
                 style={styles.scoreBtn}
                 onPress={() => router.push(`/score/${id}`)}
@@ -662,7 +671,7 @@ export default function MatchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: "center", justifyContent: "center" },
   flex: { flex: 1 },

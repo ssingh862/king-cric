@@ -1,6 +1,8 @@
+import { ownsTeam } from '../middleware/ownership';
 import { Router } from 'express';
 import { requireAuth, type AuthRequest } from '../middleware/auth';
 import {
+  Match,
   Player,
   Team,
   Tournament,
@@ -82,13 +84,19 @@ router.get('/:id', async (req, res) => {
 
 router.post('/register', requireAuth, async (req: AuthRequest, res) => {
   const { tournament_id, team_name, short_name, captain_id, players = [] } = req.body;
-  const captainId = captain_id ?? req.userId;
+  const captainId = req.userId;
 
   if (!tournament_id || !team_name?.trim()) {
     res.status(400).json({ error: 'Tournament and team name are required' });
     return;
   }
 
+  const tournament = await Tournament.findById(tournament_id);
+  if (!tournament || tournament.settings?.archived) { res.status(400).json({error:'Registration is closed'}); return; }
+  const organizer = String(tournament.organizer_id) === req.userId;
+  if (!organizer && !['registration','draft'].includes(tournament.status)) { res.status(400).json({error:'Registration is closed'}); return; }
+  if (!organizer && tournament.registration_deadline && tournament.registration_deadline < new Date()) { res.status(400).json({error:'Registration deadline has passed'}); return; }
+  if (await Team.countDocuments({tournament_id}) >= tournament.max_teams) { res.status(400).json({error:'Tournament team limit reached'}); return; }
   const name = team_name.trim();
   const short = (short_name?.trim() || name.slice(0, 3)).toUpperCase().slice(0, 4);
 
@@ -98,14 +106,14 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       captain_id: captainId,
       name,
       short_name: short,
-      is_approved: true,
+      is_approved: organizer,
     });
 
     await TournamentRegistration.create({
       tournament_id,
       team_id: team._id,
       registered_by: captainId,
-      status: 'approved',
+      status: organizer ? 'approved' : 'pending',
     });
 
     const playerRows = (players as Array<Record<string, unknown>>)
@@ -152,6 +160,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
     return;
   }
 
+  if (!await ownsTeam(req, res, team._id)) return;
   const { name, short_name, primary_color } = req.body;
   if (name) team.name = name.trim();
   if (short_name) team.short_name = short_name.trim().toUpperCase().slice(0, 4);
@@ -161,4 +170,15 @@ router.patch('/:id', requireAuth, async (req, res) => {
   res.json(toApi(team));
 });
 
+router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
+  if (!await ownsTeam(req, res, req.params.id)) return;
+  if (await Match.exists({ $or: [{ team_a_id: req.params.id }, { team_b_id: req.params.id }] })) {
+    res.status(409).json({ error: 'Delete this team’s matches first to preserve scorecards' }); return;
+  }
+  await Player.deleteMany({ team_id: req.params.id });
+  await TournamentRegistration.deleteMany({ team_id: req.params.id });
+  await PointsTable.deleteMany({ team_id: req.params.id });
+  await Team.findByIdAndDelete(req.params.id);
+  res.status(204).send();
+});
 export default router;

@@ -1,10 +1,11 @@
-import { Innings, Match, PointsTable, ScoreEvent, Team } from '../models';
+import { Tournament, Innings, Match, PointsTable, ScoreEvent, Team } from '../models';
 
 type TeamAccum = {
   played: number;
   won: number;
   lost: number;
   tied: number;
+  no_result: number;
   points: number;
   runs_for: number;
   runs_against: number;
@@ -35,6 +36,7 @@ async function ensurePointsRowsForTournament(tournamentId: string) {
 
 export async function recalculateTournamentPoints(tournamentId: string): Promise<string | null> {
   await ensurePointsRowsForTournament(tournamentId);
+  const tournament = await Tournament.findById(tournamentId);
 
   const teams = await Team.find({ tournament_id: tournamentId });
   if (!teams.length) return null;
@@ -46,6 +48,7 @@ export async function recalculateTournamentPoints(tournamentId: string): Promise
       won: 0,
       lost: 0,
       tied: 0,
+      no_result: 0,
       points: 0,
       runs_for: 0,
       runs_against: 0,
@@ -54,9 +57,16 @@ export async function recalculateTournamentPoints(tournamentId: string): Promise
     });
   }
 
-  const matches = await Match.find({ tournament_id: tournamentId, status: 'completed' });
+  const matches = await Match.find({ tournament_id: tournamentId, status: { $in: ['completed','no_result','abandoned'] } });
 
   for (const match of matches) {
+    if (match.status === 'no_result' || match.status === 'abandoned') {
+      for(const id of [match.team_a_id,match.team_b_id]) {
+        const row=accum.get(String(id));
+        if(row){row.played++;row.no_result++;row.points+=tournament?.points_no_result??1;}
+      }
+      continue;
+    }
     const innings = await Innings.find({ match_id: match._id }).sort({ innings_number: 1 });
     if (innings.length < 2) continue;
 
@@ -113,16 +123,18 @@ export async function recalculateTournamentPoints(tournamentId: string): Promise
     if (!winnerId) {
       teamA.tied++;
       teamB.tied++;
-      teamA.points += 1;
-      teamB.points += 1;
+      teamA.points += tournament?.points_tie ?? 1;
+      teamB.points += tournament?.points_tie ?? 1;
     } else if (winnerId === String(match.team_a_id)) {
       teamA.won++;
-      teamA.points += 2;
+      teamA.points += tournament?.points_win ?? 2;
       teamB.lost++;
+      teamB.points += tournament?.points_loss ?? 0;
     } else {
       teamB.won++;
-      teamB.points += 2;
+      teamB.points += tournament?.points_win ?? 2;
       teamA.lost++;
+      teamA.points += tournament?.points_loss ?? 0;
     }
   }
 
@@ -135,6 +147,7 @@ export async function recalculateTournamentPoints(tournamentId: string): Promise
         won: row.won,
         lost: row.lost,
         tied: row.tied,
+        no_result: row.no_result,
         points: row.points,
         runs_for: row.runs_for,
         runs_against: row.runs_against,

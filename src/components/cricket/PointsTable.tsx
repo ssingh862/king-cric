@@ -1,4 +1,6 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { ScrollView, StyleSheet,  View } from 'react-native';
 import { GlassCard } from '../ui/GlassCard';
 import { colors } from '../../lib/theme';
 import type { PointsTableRow } from '../../types/database';
@@ -54,7 +56,7 @@ export function PointsTable({ rows }: PointsTableProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   title: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 4 },
   subtitle: { color: colors.textDim, fontSize: 11, marginBottom: 12 },
   empty: { color: colors.textMuted, fontSize: 14, paddingVertical: 16, lineHeight: 20 },

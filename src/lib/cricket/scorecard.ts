@@ -43,6 +43,7 @@ export interface InningsScorecardData {
     economy: string;
   }>;
   extras: ExtrasBreakdown;
+  fallOfWickets: string[];
   yetToBat: string[];
 }
 
@@ -66,12 +67,13 @@ export function getDismissalText(
   playerId: string,
   events: ScoreEvent[],
   playerNames: Map<string, string>,
-  isOut: boolean
+  isOut: boolean,
+  inningsComplete = false
 ): string {
-  if (!isOut) return 'batting';
+  if (!isOut) return inningsComplete ? 'not out' : 'batting';
 
   const wicketEvent = dedupeScoreEvents(events).find(
-    (e) => e.is_wicket && (e.dismissed_player_id === playerId || e.striker_player_id === playerId)
+    (e) => e.is_wicket && (e.dismissed_player_id ?? e.striker_player_id) === playerId
   );
   if (!wicketEvent) return 'out';
 
@@ -80,13 +82,15 @@ export function getDismissalText(
     : 'Bowler';
   const wt = wicketEvent.wicket_type;
 
-  if (wt === 'run_out' || wt === 'retired' || wt === 'obstructing' || wt === 'timed_out') {
-    return wicketLabel(wt);
-  }
-  if (wt === 'caught') return `c & b ${bowler}`;
-  if (wt === 'stumped') return `st ${bowler} b ${bowler}`;
+  if (wt === 'run_out') return 'run out';
+  if (wt === 'retired') return 'retired out';
+  if (wt === 'obstructing') return 'obstructing the field';
+  if (wt === 'timed_out') return 'timed out';
+  if (wt === 'caught') return `c b ${bowler}`;
+  if (wt === 'stumped') return `st b ${bowler}`;
   if (wt === 'lbw') return `lbw b ${bowler}`;
-  if (wt === 'bowled' || wt === 'hit_wicket') return `b ${bowler}`;
+  if (wt === 'bowled') return `b ${bowler}`;
+  if (wt === 'hit_wicket') return `hit wicket b ${bowler}`;
   return `${wicketLabel(wt)} ${bowler}`;
 }
 
@@ -102,7 +106,7 @@ export function computeExtras(events: ScoreEvent[]): ExtrasBreakdown {
 
   for (const e of dedupeScoreEvents(events)) {
     if (e.ball_type === 'wide') ex.wides += e.extras + e.runs_off_bat;
-    else if (e.ball_type === 'no_ball') ex.noBalls += e.extras + e.runs_off_bat;
+    else if (e.ball_type === 'no_ball') ex.noBalls += e.extras;
     else if (e.ball_type === 'bye') ex.byes += e.extras + e.runs_off_bat;
     else if (e.ball_type === 'leg_bye') ex.legByes += e.extras + e.runs_off_bat;
     else ex.total += e.extras;
@@ -149,7 +153,8 @@ export function buildInningsScorecard(
   playerNames: Map<string, string>,
   battingTeamName: string,
   bowlingTeamName: string,
-  inningsTotals?: { runs: number; wickets: number; legalBalls: number }
+  inningsTotals?: { runs: number; wickets: number; legalBalls: number },
+  inningsComplete = false
 ): InningsScorecardData {
   const unique = dedupeScoreEvents(events);
   const battingMap = new Map(computeBattingStats(unique).map((b) => [b.playerId, b]));
@@ -177,7 +182,7 @@ export function buildInningsScorecard(
       sixes: s.sixes,
       strikeRate: s.strikeRate,
       isOut: s.isOut,
-      dismissal: getDismissalText(playerId, unique, playerNames, s.isOut),
+      dismissal: getDismissalText(playerId, unique, playerNames, s.isOut, inningsComplete),
     };
   });
 
@@ -196,10 +201,14 @@ export function buildInningsScorecard(
   let runs = 0;
   let wickets = 0;
   let legalBalls = 0;
+  const fallOfWickets: string[] = [];
   for (const e of unique) {
     runs += e.runs_off_bat + e.extras;
-    if (e.is_wicket) wickets++;
     if (e.is_legal_delivery) legalBalls++;
+    if (e.is_wicket) {
+      wickets++;
+      fallOfWickets.push(`${wickets}-${runs} (${formatOvers(legalBalls)})`);
+    }
   }
 
   if (inningsTotals) {
@@ -219,6 +228,7 @@ export function buildInningsScorecard(
     batters,
     bowlers,
     extras: computeExtras(unique),
+    fallOfWickets,
     yetToBat: getYetToBatNames(battingSquad, unique),
   };
 }

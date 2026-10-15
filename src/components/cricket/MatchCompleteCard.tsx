@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { Pressable, StyleSheet,  View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadows } from '../../lib/theme';
 
@@ -124,7 +126,7 @@ export function MatchCompleteCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginHorizontal: 16,
     gap: 12,

@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { StyleSheet,  View } from 'react-native';
 import type { MatchRules } from '../../lib/cricket/types';
 import { formatOvers } from '../../lib/scoring';
 import { maxLegalBalls, allOutWicketsLabel } from '../../lib/cricket/rules';
@@ -29,7 +31,7 @@ export function InningsFormatBanner({ rules, legalBalls }: InningsFormatBannerPr
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginBottom: 12,
     padding: 12,

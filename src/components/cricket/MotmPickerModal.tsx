@@ -1,10 +1,12 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import {
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,7 +92,7 @@ export function MotmPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,

@@ -1,13 +1,15 @@
+import { Alert } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,11 +18,11 @@ import { GradientButton } from '../../src/components/ui/GradientButton';
 import { useMatch } from '../../src/hooks/useTournaments';
 import { useMatchInnings, useTeamPlayers } from '../../src/hooks/useMatchScoring';
 import { startInnings, startMatchLive } from '../../src/lib/matches';
-import { canManageTournament } from '../../src/lib/permissions';
+import { canScoreTournament } from '../../src/lib/permissions';
 import { colors, radius, shadows } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useScoringStore, initMatchRulesFromOvers } from '../../src/stores/scoringStore';
-import type { Player } from '../../types/database';
+import type { Player } from '../../src/types/database';
 
 type PickField = 'striker' | 'non_striker' | 'bowler' | null;
 type SetupStep = 'toss' | 'players';
@@ -46,11 +48,11 @@ export default function MatchSetupScreen() {
 
   const teamA = match?.team_a as { id: string; name: string; short_name?: string; primary_color?: string } | undefined;
   const teamB = match?.team_b as { id: string; name: string; short_name?: string; primary_color?: string } | undefined;
-  const canManage = canManageTournament(match?.tournament ?? null, profile);
+  const canManage = canScoreTournament(match?.tournament ?? null, profile);
 
   useEffect(() => {
     if (isLoading || !match || !profile) return;
-    if (!canManageTournament(match.tournament, profile)) {
+    if (!canScoreTournament(match.tournament, profile)) {
       Alert.alert('Organizer only', 'Only the tournament organizer can start or set up a match.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -246,7 +248,7 @@ export default function MatchSetupScreen() {
 
               {battingTeamId && bowlingTeam ? (
                 <View style={styles.summaryBox}>
-                  <SummaryRow icon="baseball" label="Batting" value={battingTeam.name} />
+                  <SummaryRow icon="baseball" label="Batting" value={battingTeam?.name ?? 'Batting team'} />
                   <SummaryRow icon="shield" label="Bowling" value={bowlingTeam.name} />
                 </View>
               ) : null}
@@ -262,7 +264,7 @@ export default function MatchSetupScreen() {
             <>
               {battingTeam && bowlingTeam ? (
                 <View style={[styles.summaryBox, { marginBottom: 16 }]}>
-                  <SummaryRow icon="baseball" label="Batting" value={battingTeam.name} highlight />
+                  <SummaryRow icon="baseball" label="Batting" value={battingTeam?.name ?? 'Batting team'} highlight />
                   <SummaryRow icon="shield" label="Bowling" value={bowlingTeam.name} />
                 </View>
               ) : null}
@@ -405,7 +407,7 @@ function PlayerSelectRow({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },

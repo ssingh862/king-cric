@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { StyleSheet,  View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -33,7 +35,7 @@ export function LiveBadge() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

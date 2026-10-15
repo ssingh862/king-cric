@@ -8,3 +8,8 @@ export function canManageTournament(
   if (profile.role === 'admin') return true;
   return String(tournament.organizer_id) === String(profile.id);
 }
+
+/** Scorers may record deliveries; tournament management remains organizer-only. */
+export function canScoreTournament(tournament: Pick<Tournament, 'organizer_id' | 'scorer_ids'> | null | undefined, profile: Profile | null | undefined): boolean {
+  return canManageTournament(tournament, profile) || !!(profile && tournament?.scorer_ids?.includes(profile.id));
+}

@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { isApiConfigured } from '../lib/api';
 import { dedupeScoreEvents } from '../lib/scoring';
-import type { ScoreEvent } from '../types/database';
+import type { ScoreEvent, Match, Innings, Player } from '../types/database';
 
 export function useTournamentMatches(tournamentId: string) {
   return useQuery({
     queryKey: ['tournament-matches', tournamentId],
     enabled: !!tournamentId && isApiConfigured(),
     refetchOnMount: true,
-    queryFn: async () => api<unknown[]>(`/matches/tournament/${tournamentId}`),
+    queryFn: async () => api<Match[]>(`/matches/tournament/${tournamentId}`),
   });
 }
 
@@ -17,7 +17,7 @@ export function useMatchInnings(matchId: string) {
   return useQuery({
     queryKey: ['match-innings', matchId],
     enabled: !!matchId && isApiConfigured(),
-    queryFn: async () => api<unknown[]>(`/matches/${matchId}/innings`),
+    queryFn: async () => api<Innings[]>(`/matches/${matchId}/innings`),
     refetchInterval: 5000,
   });
 }
@@ -47,6 +47,6 @@ export function useTeamPlayers(teamId: string) {
   return useQuery({
     queryKey: ['team-players', teamId],
     enabled: !!teamId && isApiConfigured(),
-    queryFn: async () => api<unknown[]>(`/matches/teams/${teamId}/players`),
+    queryFn: async () => api<Player[]>(`/matches/teams/${teamId}/players`),
   });
 }

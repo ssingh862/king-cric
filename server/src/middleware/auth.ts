@@ -1,3 +1,4 @@
+import { validSession } from '../domain/access';
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
@@ -16,9 +17,9 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
 
   try {
     const token = header.slice(7);
-    const payload = jwt.verify(token, config.jwtSecret) as { sub: string };
+    const payload = jwt.verify(token, config.jwtSecret) as { sub: string; ver?: number };
     const user = await User.findById(payload.sub);
-    if (!user) {
+    if (!user || !validSession(payload.ver,user.token_version,user.suspended)) {
       res.status(401).json({ error: 'User not found' });
       return;
     }
@@ -38,7 +39,7 @@ export function optionalAuth(req: AuthRequest, res: Response, next: NextFunction
 
   try {
     const token = header.slice(7);
-    const payload = jwt.verify(token, config.jwtSecret) as { sub: string };
+    const payload = jwt.verify(token, config.jwtSecret) as { sub: string; ver?: number };
     req.userId = payload.sub;
   } catch {
     // ignore invalid token for public routes

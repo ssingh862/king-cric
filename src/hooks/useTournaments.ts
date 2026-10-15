@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, isApiConfigured } from '../lib/api';
-import type { Tournament } from '../types/database';
+import type { Tournament, Match, Team, Player, PointsTableRow } from '../types/database';
 
 const queryDefaults = {
   enabled: isApiConfigured(),
@@ -42,7 +42,7 @@ export function useLiveMatches() {
   return useQuery({
     ...queryDefaults,
     queryKey: ['matches', 'live'],
-    queryFn: async () => api<unknown[]>('/matches/live'),
+    queryFn: async () => api<Match[]>('/matches/live'),
     refetchInterval: 15000,
   });
 }
@@ -55,7 +55,7 @@ export function useUpcomingMatches(tournamentId?: string) {
       const path = tournamentId
         ? `/matches/upcoming?tournament_id=${encodeURIComponent(tournamentId)}`
         : '/matches/upcoming';
-      return api<unknown[]>(path);
+      return api<Match[]>(path);
     },
     refetchInterval: 15000,
   });
@@ -70,7 +70,7 @@ export function useCompletedMatches(tournamentId?: string) {
       const path = tournamentId
         ? `/matches/completed?tournament_id=${encodeURIComponent(tournamentId)}`
         : '/matches/completed';
-      return api<unknown[]>(path);
+      return api<Match[]>(path);
     },
   });
 }
@@ -80,7 +80,7 @@ export function useMatch(matchId: string) {
     ...queryDefaults,
     queryKey: ['match', matchId],
     enabled: !!matchId && isApiConfigured(),
-    queryFn: async () => api<unknown>(`/matches/${matchId}`),
+    queryFn: async () => api<Match>(`/matches/${matchId}`),
   });
 }
 
@@ -89,7 +89,7 @@ export function usePointsTable(tournamentId: string) {
     ...queryDefaults,
     queryKey: ['points', tournamentId],
     enabled: !!tournamentId && isApiConfigured(),
-    queryFn: async () => api<unknown[]>(`/players/tournament/${tournamentId}/points`),
+    queryFn: async () => api<PointsTableRow[]>(`/players/tournament/${tournamentId}/points`),
   });
 }
 
@@ -98,7 +98,7 @@ export function useTournamentTeams(tournamentId: string) {
     ...queryDefaults,
     queryKey: ['tournament-teams', tournamentId],
     enabled: !!tournamentId && isApiConfigured(),
-    queryFn: async () => api<unknown[]>(`/players/tournament/${tournamentId}`),
+    queryFn: async () => api<Team[]>(`/players/tournament/${tournamentId}`),
   });
 }
 
@@ -107,7 +107,7 @@ export function useMyTeams(profileId: string | undefined) {
     ...queryDefaults,
     queryKey: ['my-teams', profileId],
     enabled: Boolean(profileId) && isApiConfigured(),
-    queryFn: async () => api<unknown[]>('/teams/my'),
+    queryFn: async () => api<(Team & { tournament?: Tournament })[]>('/teams/my'),
   });
 }
 
@@ -116,6 +116,6 @@ export function useTeam(teamId: string) {
     ...queryDefaults,
     queryKey: ['team', teamId],
     enabled: !!teamId && isApiConfigured(),
-    queryFn: async () => api<unknown>(`/teams/${teamId}`),
+    queryFn: async () => api<Team & { players: Player[]; tournament?: Tournament }>(`/teams/${teamId}`),
   });
 }

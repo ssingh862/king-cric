@@ -19,7 +19,7 @@ A modern React Native (Expo) app for local cricket tournaments with live ball-by
 
 ## Tech Stack
 
-- **Expo SDK 54** + TypeScript + Expo Router (React Native app)
+- **Expo SDK 57** + TypeScript + Expo Router (React Native app)
 - **Node.js + Express** — REST API
 - **MongoDB + Mongoose** — database
 - **Socket.io** — live score updates
@@ -42,6 +42,8 @@ server/                 # Node.js API + MongoDB
 ## Quick Start
 
 ### 1. Install dependencies
+
+Use Node.js 22.23.1 (or a supported newer LTS) and Expo Go for SDK 57.
 
 ```bash
 npm install
@@ -144,6 +146,18 @@ npx expo start -c
 | POST | `/matches/innings/:id/score-events` | Record a ball |
 
 Socket.io events: `join_innings`, `score_event`, `innings_updated`
+
+## Launch screen
+
+On a fresh launch, the native splash stays visible until the animated KingCric surface and logo are ready. The logo, ring and wordmark animate before the login/home screen is revealed; authentication initialization runs behind the launch screen. Reduced-motion preferences skip the animation. Reload or fully close and reopen the app to replay it.
+
+Native splash configuration changes require a new app binary. Test the complete startup experience in a release build: Expo Go does not reproduce every native splash setting.
+
+## Scoring and validation
+
+Match settings support configurable wide/no-ball penalties, whether they count as balls, free hits, byes, leg byes and local last-batter rules. Rules lock after innings setup. Scorers can correct the latest delivery's runs or undo deliveries backwards. The handbook describes the supported limited-overs rules; DLS, Test formats and some exceptional umpire decisions are not automated.
+
+Run `npm run typecheck`, `npm test`, and `npm run build --prefix server` before releasing. Deploy the updated API alongside the app for rule validation, ownership checks and scoring corrections. Email/password login is supported; password-recovery email delivery still needs a provider implementation.
 
 ## License
 

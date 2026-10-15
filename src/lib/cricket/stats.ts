@@ -110,12 +110,12 @@ export function computeBattingStats(events: ScoreEvent[]): BatterStats[] {
     const batRuns = runsCountToBatsman(e.ball_type, e.runs_off_bat);
     s.runs += batRuns;
 
-    if (e.is_legal_delivery) {
+    if (e.ball_type !== 'wide') {
       s.balls++;
       if (batRuns === 0 && !e.is_wicket) {
         if (['dot', 'bye', 'leg_bye'].includes(e.ball_type)) s.dots++;
       }
-      if (!['wide', 'no_ball', 'bye', 'leg_bye', 'wicket'].includes(e.ball_type)) {
+      if (!['wide', 'bye', 'leg_bye', 'wicket'].includes(e.ball_type)) {
         countBoundary(s, e.ball_type, e.runs_off_bat);
       } else if (e.ball_type === 'wicket' && batRuns === 0) {
         s.dots++;
@@ -152,16 +152,16 @@ export function computeBowlingStats(events: ScoreEvent[]): BowlerStats[] {
       map.set(bowlerId, s);
     }
 
-    const conceded = e.runs_off_bat + e.extras;
+    const conceded = ['bye', 'leg_bye'].includes(e.ball_type) ? 0 : e.runs_off_bat + e.extras;
     s.runs += conceded;
 
     if (e.ball_type === 'wide') s.wides++;
     if (e.ball_type === 'no_ball') s.noBalls++;
 
+    const key = `${bowlerId}-${e.over_number}`;
+    overRuns.set(key, (overRuns.get(key) ?? 0) + conceded);
     if (e.is_legal_delivery) {
       s.balls++;
-      const key = `${bowlerId}-${e.over_number}`;
-      overRuns.set(key, (overRuns.get(key) ?? 0) + conceded);
       if (e.ball_in_over === 6) {
         const overTotal = overRuns.get(key) ?? 0;
         if (overTotal === 0) s.maidens++;

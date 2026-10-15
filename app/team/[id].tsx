@@ -1,15 +1,25 @@
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GradientButton } from '../../src/components/ui/GradientButton';
 import { useTeam } from '../../src/hooks/useTournaments';
 import { canManageTournament } from '../../src/lib/permissions';
-import { isApiConfigured } from '../../src/lib/api';
+import { apiSafe, isApiConfigured } from '../../src/lib/api';
 import { colors } from '../../src/lib/theme';
 import type { Player, Tournament } from '../../src/types/database';
 import { useAuthStore } from '../../src/stores/authStore';
+
+async function pickPlayerPhoto(playerId: string, refetch: () => Promise<unknown>) {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.4, base64: true });
+  if (result.canceled || !result.assets[0]?.base64 || result.assets[0].base64.length > 850000) return;
+  await apiSafe(`/players/${playerId}`, { method: 'PATCH', body: JSON.stringify({ photo_url: `data:image/jpeg;base64,${result.assets[0].base64}` }) });
+  await refetch();
+}
 
 export default function TeamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -68,6 +78,7 @@ export default function TeamScreen() {
           </View>
 
           <Text style={styles.section}>Squad ({players.length})</Text>
+          {canEditSquad ? <Text style={styles.empty}>Tap a player for stats. Hold a player to add a photo. Jersey numbers show when there is no photo.</Text> : null}
           {players.length === 0 ? (
             <GlassCard>
               <Text style={styles.empty}>No players yet. Tap Edit to add your squad.</Text>
@@ -76,13 +87,14 @@ export default function TeamScreen() {
             players.map((p) => (
               <Pressable
                 key={p.id}
-                onPress={() => router.push({ pathname: '/team/edit', params: { id: id ?? '' } })}
+                onPress={() => router.push(`/player/${p.id}`)}
+                onLongPress={canEditSquad ? () => void pickPlayerPhoto(p.id, refetch) : undefined}
               >
                 <GlassCard style={{ marginBottom: 8 }}>
                   <View style={styles.playerRow}>
-                    <View style={styles.jersey}>
+                    {p.photo_url ? <Image source={{ uri: p.photo_url }} style={styles.photo} /> : <View style={styles.jersey}>
                       <Text style={styles.jerseyNum}>{p.jersey_number ?? '—'}</Text>
-                    </View>
+                    </View>}
                     <View style={styles.playerInfo}>
                       <Text style={styles.playerName}>
                         {p.full_name}
@@ -115,7 +127,7 @@ export default function TeamScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center' },
   headerAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 120, opacity: 0.12 },
@@ -144,6 +156,7 @@ const styles = StyleSheet.create({
   section: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 12 },
   empty: { color: colors.textMuted, textAlign: 'center' },
   playerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  photo: { width: 40, height: 40, borderRadius: 20 },
   jersey: {
     width: 40,
     height: 40,

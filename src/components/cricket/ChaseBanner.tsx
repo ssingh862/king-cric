@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { StyleSheet,  View } from 'react-native';
 import type { ChaseStatus } from '../../lib/cricket/chase';
 import { colors, radius } from '../../lib/theme';
 
@@ -17,7 +19,7 @@ export function ChaseBanner({ chase }: ChaseBannerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginBottom: 12,
     padding: 14,

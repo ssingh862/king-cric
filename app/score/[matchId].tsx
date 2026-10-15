@@ -1,14 +1,17 @@
+import { Alert } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
+import { DeliveryHistory } from '../../src/components/cricket/DeliveryHistory';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,7 +46,7 @@ import {
   autoFinalizeMatch,
   type MatchOutcome,
 } from '../../src/lib/matchFlow';
-import { canManageTournament } from '../../src/lib/permissions';
+import { canScoreTournament } from '../../src/lib/permissions';
 import {
   useScoringStore,
   initMatchRulesFromOvers,
@@ -86,6 +89,7 @@ export default function ScoringScreen() {
   const [pendingBowlerAfterBatsman, setPendingBowlerAfterBatsman] = useState(false);
   const [scoringBusy, setScoringBusy] = useState(false);
   const [wicketPickerOpen, setWicketPickerOpen] = useState(false);
+  const [wicketBall, setWicketBall] = useState<{ ballType: BallType; runsOffBat?: number; extras?: number }>({ ballType: 'wicket' });
   const [matchOutcome, setMatchOutcome] = useState<MatchOutcome | null>(null);
   const [endingInnings, setEndingInnings] = useState(false);
 
@@ -112,13 +116,13 @@ export default function ScoringScreen() {
   }, [teamAPlayers, teamBPlayers, match?.team_a_id, match?.team_b_id]);
 
   const canOrganize = useMemo(
-    () => (match && profile ? canManageTournament(match.tournament, profile) : true),
+    () => !!match && !!profile && canScoreTournament(match.tournament, profile),
     [match, profile]
   );
 
   useEffect(() => {
     if (!match || !profile || canOrganize) return;
-    Alert.alert('Organizer only', 'Only the tournament organizer can score this match.', [
+    Alert.alert('Organizer only', 'Only the organizer or an assigned scorer can score this match.', [
       { text: 'OK', onPress: () => router.replace(`/match/${matchId}`) },
     ]);
   }, [match, profile, canOrganize, matchId]);
@@ -152,14 +156,14 @@ export default function ScoringScreen() {
   useEffect(() => {
     if (match?.overs_per_innings) {
       const squadSize = batters?.length;
-      setMatchRules(initMatchRulesFromOvers(match.overs_per_innings, squadSize));
+      setMatchRules(initMatchRulesFromOvers(match.overs_per_innings, squadSize, match.rules));
     }
-  }, [match?.overs_per_innings, batters?.length, setMatchRules]);
+  }, [match?.overs_per_innings, match?.rules, batters?.length, setMatchRules]);
 
   const uniqueEvents = useMemo(() => dedupeScoreEvents(events), [events]);
   const snapshot = getSnapshot();
-  const runs = innings?.total_runs ?? snapshot.totalRuns;
-  const wickets = innings?.total_wickets ?? snapshot.totalWickets;
+  const runs = snapshot.totalRuns;
+  const wickets = snapshot.totalWickets;
   const chase = useMemo(
     () =>
       computeChaseStatus(
@@ -266,7 +270,10 @@ export default function ScoringScreen() {
             ? 'Target reached'
             : 'All out';
 
-      finishInningsFlow(reason);
+      Alert.alert(reason, 'Review the last delivery before continuing. You can undo or edit it in delivery history.', [
+        { text: 'Review score', style: 'cancel' },
+        { text: 'Finish innings', onPress: () => finishInningsFlow(reason) },
+      ]);
     },
     [finishInningsFlow, matchRules.oversPerInnings]
   );
@@ -278,7 +285,7 @@ export default function ScoringScreen() {
     ]);
   }, [finishInningsFlow]);
 
-  const onBall = async (type: BallType, opts?: { isWicket?: boolean }) => {
+  const onBall = async (type: BallType, opts?: { isWicket?: boolean; runsOffBat?: number; extras?: number }) => {
     if (scoringBusy || followUp) return;
     if (!strikerId || !bowlerId) {
       Alert.alert('Select players', 'Choose striker and bowler before scoring.');
@@ -289,12 +296,15 @@ export default function ScoringScreen() {
       return;
     }
     if (opts?.isWicket || type === 'wicket') {
+      setWicketBall({ ballType: type, runsOffBat: opts?.runsOffBat, extras: opts?.extras });
       setWicketPickerOpen(true);
       return;
     }
     setScoringBusy(true);
-    const result = await recordBall({ ballType: type });
-    setScoringBusy(false);
+    let result: RecordBallResult;
+    try { result = await recordBall({ ballType: type, ...opts }); }
+    catch { result = { error: 'Connection interrupted. Reload the score before retrying.' }; }
+    finally { setScoringBusy(false); }
 
     if (result.error) {
       Alert.alert('Cannot score', result.error);
@@ -341,9 +351,8 @@ export default function ScoringScreen() {
     }
     if (followUp === 'new_bowler') {
       const { strikerId: s, nonStrikerId: ns } = useScoringStore.getState();
-      if (!ns) return;
-      const striker = s ?? p.id;
-      setPlayers(striker, ns, p.id);
+      if (!s && !ns) return;
+      setPlayers(s, ns, p.id);
       await syncPlayersToDb();
       setFollowUp(null);
     }
@@ -364,7 +373,7 @@ export default function ScoringScreen() {
     if (scoringBusy || followUp) return;
     setScoringBusy(true);
     const result = await recordBall({
-      ballType: 'wicket',
+      ...wicketBall,
       isWicket: true,
       wicketType: selection.wicketType,
       dismissedPlayerId: selection.dismissedPlayerId,
@@ -391,7 +400,8 @@ export default function ScoringScreen() {
     const nextStriker = pickerRole === 'striker' ? p.id : strikerId;
     const nextNon = pickerRole === 'non_striker' ? p.id : nonStrikerId;
     const nextBowler = pickerRole === 'bowler' ? p.id : bowlerId;
-    if (!nextStriker || !nextNon || !nextBowler) {
+    if (nextStriker && nextStriker === nextNon) { Alert.alert('Different batters required', 'Striker and non-striker must be different players.'); return; }
+    if (!nextStriker || (!nextNon && !matchRules.lastBatterStands) || !nextBowler) {
       Alert.alert('Select all players', 'Striker, non-striker and bowler are all required.');
       return;
     }
@@ -437,11 +447,11 @@ export default function ScoringScreen() {
   }
 
   const pickerPlayers = pickerRole === 'bowler' ? bowlers ?? [] : batters ?? [];
-  const canBatSolo = (matchRules.battingSquadSize ?? 11) < 11;
+  const canBatSolo = matchRules.lastBatterStands === true;
   const loneBatterOk =
     canBatSolo && uniqueEvents.length > 0 && !!strikerId && !nonStrikerId;
   const playersReady = !!(strikerId && bowlerId && (nonStrikerId || loneBatterOk));
-  const padDisabled = scoringBusy || !!followUp || !playersReady;
+  const padDisabled = scoringBusy || !!followUp || !playersReady || !canOrganize;
 
   return (
     <View style={styles.root}>
@@ -530,6 +540,7 @@ export default function ScoringScreen() {
             disabled={scoringBusy}
           />
 
+          <DeliveryHistory events={uniqueEvents} disabled={scoringBusy || !canOrganize} onUndo={async()=>{const result=await undoLastBall();if(!result.error){setFollowUp(null);setPendingBowlerAfterBatsman(false);}return result;}} onChanged={async()=>{await loadEvents(innings.id); await syncPlayersToDb();}} />
           <RecentBallsStrip events={uniqueEvents} />
 
           {playersReady && (
@@ -543,7 +554,7 @@ export default function ScoringScreen() {
             />
           )}
 
-          <ScoringPad onBall={onBall} disabled={padDisabled} />
+          <ScoringPad onBall={onBall} disabled={padDisabled} rules={matchRules} />
         </ScrollView>
 
       </SafeAreaView>
@@ -565,7 +576,7 @@ export default function ScoringScreen() {
         visible={followUp === 'new_bowler'}
         title="Over complete"
         subtitle="Who bowls the next over?"
-        players={bowlers ?? []}
+        players={(bowlers ?? []).filter((p) => p.id !== [...uniqueEvents].reverse().find((e) => e.is_legal_delivery)?.bowler_player_id)}
         required
         onSelect={onFollowUpSelect}
       />
@@ -605,7 +616,7 @@ export default function ScoringScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   center: { alignItems: 'center', justifyContent: 'center', padding: 24 },

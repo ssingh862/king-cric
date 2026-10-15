@@ -1,13 +1,15 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
+import { isRunningInExpoGo } from 'expo';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 
 /** Remote push is not available in Expo Go (SDK 53+). Use a dev build for production push. */
 export function isPushNotificationsAvailable(): boolean {
+  if (Platform.OS === 'web') return false;
   if (!Device.isDevice) return false;
-  if (Constants.appOwnership === 'expo') return false;
+  if (isRunningInExpoGo() || Constants.appOwnership === 'expo') return false;
   return true;
 }
 
@@ -16,6 +18,7 @@ export function usePushNotifications() {
   const registered = useRef(false);
 
   useEffect(() => {
+    if (!profile?.preferences?.notifications) { registered.current = false; return; }
     if (!profile || registered.current || !isPushNotificationsAvailable()) return;
 
     registered.current = true;
@@ -23,16 +26,17 @@ export function usePushNotifications() {
     registerForPushNotifications()
       .then((token) => {
         if (token && token !== profile.expo_push_token) {
-          updateProfile({ expo_push_token: token } as never);
+          void updateProfile({ expo_push_token: token } as never).catch(() => undefined);
         }
       })
       .catch(() => {
         // Push is optional; ignore errors in dev
       });
-  }, [profile?.id]);
+  }, [profile?.id, profile?.preferences?.notifications]);
 }
 
 async function registerForPushNotifications(): Promise<string | null> {
+  if (!isPushNotificationsAvailable()) return null;
   const Notifications = await import('expo-notifications');
 
   Notifications.setNotificationHandler({

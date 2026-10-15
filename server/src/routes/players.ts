@@ -1,6 +1,8 @@
+import { ownsTeam } from '../middleware/ownership';
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { Player, Team, PointsTable, toApi } from '../models';
+import { Player, Team, PointsTable, ScoreEvent, toApi } from '../models';
+import { playerCareer } from '../services/career';
 import { tournamentSummary } from '../utils/serialize';
 
 const router = Router();
@@ -43,6 +45,8 @@ router.post('/batch', requireAuth, async (req, res) => {
     players: Array<Record<string, unknown>>;
   };
 
+  if (!await ownsTeam(req, res, team_id)) return;
+  if (!Array.isArray(players)) { res.status(400).json({ error: 'Players must be a list' }); return; }
   const rows = players
     .filter((p) => String(p.full_name ?? p.fullName ?? '').trim())
     .map((p) => ({
@@ -58,6 +62,12 @@ router.post('/batch', requireAuth, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+router.get('/:id/career', async (req, res) => {
+  const career = await playerCareer(req.params.id);
+  if (!career) { res.status(404).json({ error: 'Player not found' }); return; }
+  res.json(career);
+});
+
 router.patch('/:id', requireAuth, async (req, res) => {
   const player = await Player.findById(req.params.id);
   if (!player) {
@@ -65,6 +75,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
     return;
   }
 
+  if (!await ownsTeam(req, res, player.team_id)) return;
   const allowed = [
     'full_name',
     'jersey_number',
@@ -74,10 +85,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
     'batting_style',
     'bowling_style',
     'profile_id',
+    'photo_url',
   ] as const;
 
   for (const key of allowed) {
-    if (key in req.body) (player as Record<string, unknown>)[key] = req.body[key];
+    if (key in req.body) {
+      if (key === 'photo_url' && req.body.photo_url && String(req.body.photo_url).length > 900000) { res.status(400).json({ error: 'Photo is too large' }); return; }
+      (player as Record<string, unknown>)[key] = req.body[key];
+    }
   }
 
   await player.save();
@@ -85,12 +100,20 @@ router.patch('/:id', requireAuth, async (req, res) => {
 });
 
 router.post('/', requireAuth, async (req, res) => {
-  const player = await Player.create(req.body);
+  if (!await ownsTeam(req, res, req.body.team_id)) return;
+  const { team_id, full_name, jersey_number, role, is_captain, is_wicket_keeper } = req.body;
+  const player = await Player.create({ team_id, full_name, jersey_number, role, is_captain, is_wicket_keeper });
   res.status(201).json(toApi(player));
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
-  await Player.findByIdAndDelete(req.params.id);
+  const player = await Player.findById(req.params.id);
+  if (!player) { res.status(404).json({ error: 'Player not found' }); return; }
+  if (!await ownsTeam(req, res, player.team_id)) return;
+  if (await ScoreEvent.exists({ $or: ['striker_player_id','non_striker_player_id','bowler_player_id','dismissed_player_id'].map(key => ({ [key]: player._id })) })) {
+    res.status(409).json({ error: 'This player appears in a scorecard. Edit their details instead.' }); return;
+  }
+  await player.deleteOne();
   res.status(204).send();
 });
 

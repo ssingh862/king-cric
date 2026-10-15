@@ -1,3 +1,5 @@
+import { createThemedStyles } from '../../../src/lib/theme';
+import { Text } from '../../../src/i18n';
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -6,7 +8,7 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
+
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -100,6 +102,11 @@ export default function MatchScorecardScreen() {
         ? (match.team_a?.name ?? teamA)
         : (match.team_b?.name ?? teamB);
 
+    const inningsComplete =
+      inn.status === "completed" ||
+      match.status === "completed" ||
+      snap.isInningsComplete;
+
     return buildInningsScorecard(
       events,
       (battingSquad ?? []) as Player[],
@@ -111,6 +118,7 @@ export default function MatchScorecardScreen() {
         wickets: inn.total_wickets ?? snap.totalWickets,
         legalBalls: snap.legalBalls,
       },
+      inningsComplete,
     );
   }, [
     match,
@@ -228,7 +236,7 @@ export default function MatchScorecardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },

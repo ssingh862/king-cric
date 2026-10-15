@@ -1,12 +1,17 @@
+import { Alert, TextInput } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
+import { apiSafe } from '../../src/lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { KeyboardForm } from '../../src/components/ui/KeyboardForm';
 import { GradientButton } from '../../src/components/ui/GradientButton';
-import { updateTournament } from '../../src/lib/tournaments';
+import { TournamentProfileFields } from '../../src/components/tournament/TournamentProfileFields';
+import { updateTournament, validateTournamentProfile, type TournamentBallType } from '../../src/lib/tournaments';
 import { canManageTournament } from '../../src/lib/permissions';
 import { colors, radius } from '../../src/lib/theme';
 import { useTournament } from '../../src/hooks/useTournaments';
@@ -38,6 +43,13 @@ export default function EditTournamentScreen() {
   const [overs, setOvers] = useState('20');
   const [maxTeams, setMaxTeams] = useState('8');
   const [status, setStatus] = useState<string>('registration');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [organizerName, setOrganizerName] = useState('');
+  const [organizerPhone, setOrganizerPhone] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [registrationDate, setRegistrationDate] = useState('');
+  const [closingDate, setClosingDate] = useState('');
+  const [ballType, setBallType] = useState<TournamentBallType>('tennis');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -49,6 +61,13 @@ export default function EditTournamentScreen() {
     setOvers(String(tournament.overs_per_innings ?? 20));
     setMaxTeams(String(tournament.max_teams ?? 8));
     setStatus(tournament.status ?? 'registration');
+    setLogoUrl(tournament.logo_url ?? null);
+    setOrganizerName(tournament.organizer_name ?? '');
+    setOrganizerPhone(tournament.organizer_phone ?? '');
+    setStartDate(tournament.start_date ?? '');
+    setRegistrationDate(tournament.registration_date ?? '');
+    setClosingDate(tournament.registration_deadline?.slice(0, 10) ?? '');
+    setBallType((tournament.ball_type as TournamentBallType) || 'tennis');
   }, [tournament]);
 
   const handleSave = async () => {
@@ -58,6 +77,19 @@ export default function EditTournamentScreen() {
     }
     if (!id || !name.trim()) {
       Alert.alert('Required', 'Tournament name is required');
+      return;
+    }
+    const profileError = validateTournamentProfile({
+      organizerName,
+      organizerPhone,
+      startDate,
+      registrationDate,
+      closingDate,
+      ballType,
+      logoUrl,
+    });
+    if (profileError) {
+      Alert.alert('Required', profileError);
       return;
     }
 
@@ -71,6 +103,13 @@ export default function EditTournamentScreen() {
       oversPerInnings: parseInt(overs, 10) || 20,
       maxTeams: parseInt(maxTeams, 10) || 8,
       status,
+      logoUrl,
+      organizerName,
+      organizerPhone,
+      startDate,
+      registrationDate,
+      closingDate,
+      ballType,
     });
     setSaving(false);
 
@@ -124,6 +163,23 @@ export default function EditTournamentScreen() {
           <Text style={styles.label}>Venue</Text>
           <TextInput style={styles.input} value={venue} onChangeText={setVenue} placeholderTextColor={colors.textDim} />
 
+          <TournamentProfileFields
+            logoUrl={logoUrl}
+            onLogo={setLogoUrl}
+            organizerName={organizerName}
+            onOrganizerName={setOrganizerName}
+            organizerPhone={organizerPhone}
+            onOrganizerPhone={setOrganizerPhone}
+            startDate={startDate}
+            onStartDate={setStartDate}
+            registrationDate={registrationDate}
+            onRegistrationDate={setRegistrationDate}
+            closingDate={closingDate}
+            onClosingDate={setClosingDate}
+            ballType={ballType}
+            onBallType={setBallType}
+          />
+
           <Text style={styles.label}>Format</Text>
           <View style={styles.chipRow}>
             {['T10', 'T20', 'ODI'].map((f) => (
@@ -169,13 +225,15 @@ export default function EditTournamentScreen() {
           </View>
 
           <GradientButton title="Save Changes" onPress={handleSave} loading={saving} style={{ marginTop: 24 }} />
-        </KeyboardForm>
+
+          {canManage && <Pressable disabled={saving} style={{padding:20,alignItems:'center',marginTop:18}} onPress={()=>Alert.alert('Delete tournament?', 'This permanently deletes the tournament, its teams, matches and scorecards.', [{text:'Keep tournament',style:'cancel'},{text:'Delete permanently',style:'destructive',onPress:async()=>{setSaving(true);const {error}=await apiSafe(`/tournaments/${id}`,{method:'DELETE'});setSaving(false);if(error){Alert.alert('Could not delete',error);return;}await queryClient.invalidateQueries();router.replace('/(tabs)/tournaments');}}])}><Text style={{color:colors.live,fontWeight:'700'}}>Delete tournament</Text></Pressable>}
+</KeyboardForm>
       </SafeAreaView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },

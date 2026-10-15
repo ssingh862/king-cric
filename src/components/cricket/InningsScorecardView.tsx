@@ -1,8 +1,10 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
 } from "react-native";
 import type { InningsScorecardData } from "../../lib/cricket/scorecard";
@@ -83,7 +85,7 @@ export function InningsScorecardView({
             <View style={[styles.batterCell, { width: 148 }]}>
               <Text style={styles.batterName}>{b.name}</Text>
               <Text
-                style={[styles.dismissal, !b.isOut && styles.battingTag]}
+                style={[styles.dismissal, b.dismissal === "batting" && styles.battingTag]}
                 numberOfLines={2}
               >
                 {b.dismissal}
@@ -123,8 +125,15 @@ export function InningsScorecardView({
         </View>
       ) : null}
 
+      {data.fallOfWickets?.length ? (
+        <View style={styles.yetToBat}>
+          <Text style={styles.yetToBatTitle}>Fall of wickets</Text>
+          <Text style={styles.yetToBatNames}>{data.fallOfWickets.join(', ')}</Text>
+        </View>
+      ) : null}
+
       <View style={styles.section}>
-        <Text style={styles.bowlTitle}>Bowling</Text>
+      <Text style={styles.bowlTitle}>Bowling</Text>
         <TableHeader
           cols={[
             { label: "Bowler", width: 100, align: "left" },
@@ -164,7 +173,7 @@ export function InningsScorecardView({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   scroll: { paddingBottom: 32 },
   teamBar: {
     flexDirection: "row",

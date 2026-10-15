@@ -1,3 +1,4 @@
+import { createThemedStyles } from '../../lib/theme';
 import { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
@@ -39,7 +40,7 @@ export function KeyboardForm({ children, contentContainerStyle }: KeyboardFormPr
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   flex: { flex: 1 },
   content: { padding: 20, flexGrow: 1 },
 });

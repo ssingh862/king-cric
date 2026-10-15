@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { StyleSheet,  View } from 'react-native';
 import type { Player } from '../../types/database';
 import { colors, radius } from '../../lib/theme';
 
@@ -26,7 +28,7 @@ export function RemainingSquadBar({ label, players }: RemainingSquadBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginBottom: 12,
     padding: 12,

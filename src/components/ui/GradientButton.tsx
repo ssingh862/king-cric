@@ -1,10 +1,12 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Text,
+
   ViewStyle,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -67,7 +69,7 @@ export function GradientButton({
       style={[animStyle, style]}
     >
       <LinearGradient
-        colors={[colors.orange, colors.pink]}
+        colors={[colors.orange, colors.orangeDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={[styles.gradient, shadows.button]}
@@ -82,7 +84,7 @@ export function GradientButton({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   gradient: {
     paddingVertical: 16,
     paddingHorizontal: 24,

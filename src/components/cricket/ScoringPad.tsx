@@ -1,6 +1,9 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import type { MatchRules } from '../../lib/cricket/types';
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet,  View } from "react-native";
 import { Pressable } from "react-native";
 import type { BallType } from "../../types/database";
 import { colors, radius, shadows } from "../../lib/theme";
@@ -24,31 +27,40 @@ const EXTRA_BUTTONS: { label: string; type: BallType }[] = [
 const ALL_SELECTABLE = [...RUN_BUTTONS, ...EXTRA_BUTTONS];
 
 interface ScoringPadProps {
-  onBall: (type: BallType, extras?: { isWicket?: boolean }) => void;
+  onBall: (type: BallType, extras?: { isWicket?: boolean; runsOffBat?: number; extras?: number }) => void;
+  rules: MatchRules;
   disabled?: boolean;
 }
 
-export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
+export function ScoringPad({ onBall, disabled, rules }: ScoringPadProps) {
+  const [additionalRuns, setAdditionalRuns] = useState(0);
   const [selected, setSelected] = useState<BallType | null>(null);
 
   const toggleSelect = (type: BallType) => {
     if (disabled) return;
     Haptics.selectionAsync();
+    setAdditionalRuns(0);
     setSelected((prev) => (prev === type ? null : type));
   };
 
   const confirm = () => {
     if (!selected || disabled) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onBall(selected);
+    const options = selected === 'wide' ? { extras: rules.widePenaltyRuns + additionalRuns, runsOffBat: 0 }
+      : selected === 'no_ball' ? { extras: rules.noBallPenaltyRuns, runsOffBat: additionalRuns }
+      : selected === 'bye' || selected === 'leg_bye' ? { extras: Math.max(1, additionalRuns), runsOffBat: 0 } : undefined;
+    onBall(selected, options);
     setSelected(null);
   };
 
   const pressWicket = () => {
     if (disabled) return;
     Haptics.selectionAsync();
+    onBall(selected === 'wide' || selected === 'no_ball' ? selected : 'wicket', {
+      isWicket: true,
+      ...(selected === 'wide' ? { extras: rules.widePenaltyRuns + additionalRuns, runsOffBat: 0 } : selected === 'no_ball' ? { extras: rules.noBallPenaltyRuns, runsOffBat: additionalRuns } : { runsOffBat: additionalRuns }),
+    });
     setSelected(null);
-    onBall("wicket", { isWicket: true });
   };
 
   const selectedLabel = ALL_SELECTABLE.find((b) => b.type === selected)?.label;
@@ -92,7 +104,7 @@ export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
       </View>
 
       <View style={styles.row}>
-        {EXTRA_BUTTONS.map((b) => {
+        {EXTRA_BUTTONS.filter(b => b.type !== 'bye' || rules.allowByes !== false).filter(b => b.type !== 'leg_bye' || rules.allowLegByes !== false).map((b) => {
           const isSelected = selected === b.type;
           return (
             <Pressable
@@ -129,6 +141,10 @@ export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
         </Pressable>
       </View>
 
+      {selected && ['wide','no_ball','bye','leg_bye'].includes(selected) && <View>
+        <Text style={styles.label}>{selected === 'no_ball' ? 'Runs off the bat (penalty added separately)' : selected === 'wide' ? 'Additional wides (excluding penalty)' : 'Bye / leg-bye runs'}</Text>
+        <View style={styles.row}>{[0,1,2,3,4,6].filter(n => !['bye','leg_bye'].includes(selected) || n > 0).map(n => <Pressable key={n} disabled={disabled} style={[styles.btn,additionalRuns===n&&styles.selectedBtn]} onPress={()=>setAdditionalRuns(n)}><Text style={styles.extraText}>{n}</Text></Pressable>)}</View>
+      </View>}
       <Pressable
         style={[
           styles.confirmBtn,
@@ -154,7 +170,7 @@ export function ScoringPad({ onBall, disabled }: ScoringPadProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   container: {
     gap: 10,
     backgroundColor: colors.card,

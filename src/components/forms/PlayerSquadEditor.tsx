@@ -1,5 +1,8 @@
+import { TextInput } from '../../i18n';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { colors, radius } from '../../lib/theme';
 
 export interface SquadPlayerDraft {
@@ -136,7 +139,7 @@ export function PlayerSquadEditor({ players, onChange }: PlayerSquadEditorProps)
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: { marginTop: 8 },
   headerRow: {
     flexDirection: 'row',

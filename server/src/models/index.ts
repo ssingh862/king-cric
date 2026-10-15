@@ -28,7 +28,7 @@ export function toApi<T extends Document | Record<string, unknown> | null>(
       ? (doc as Document).toObject()
       : { ...(doc as Record<string, unknown>) };
 
-  const { _id, __v, password, ...rest } = obj as Record<string, unknown>;
+  const { _id, __v, password, token_version, ...rest } = obj as Record<string, unknown>;
   const id = _id ?? (obj as Record<string, unknown>).id;
   return serializeValue({ id: String(id), ...rest }) as never;
 }
@@ -51,6 +51,13 @@ const userSchema = new Schema(
     },
     expo_push_token: { type: String, default: null },
     is_premium: { type: Boolean, default: false },
+    city: { type: String, default: '' },
+    playing_role: { type: String, default: 'all_rounder' },
+    batting_style: { type: String, default: '' },
+    bowling_style: { type: String, default: '' },
+    preferences: { type: Schema.Types.Mixed, default: {} },
+    token_version: { type: Number, default: 0 },
+    suspended: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
 );
@@ -64,6 +71,13 @@ export type UserDoc = Document & {
   role: string;
   expo_push_token: string | null;
   is_premium: boolean;
+  city: string;
+  playing_role: string;
+  batting_style: string;
+  bowling_style: string;
+  preferences: Record<string, unknown>;
+  token_version: number;
+  suspended: boolean;
 };
 
 export const User = mongoose.model<UserDoc>('User', userSchema);
@@ -75,6 +89,9 @@ const tournamentSchema = new Schema(
     slug: { type: String, required: true },
     description: { type: String, default: null },
     logo_url: { type: String, default: null },
+    organizer_name: { type: String, default: null },
+    organizer_phone: { type: String, default: null },
+    ball_type: { type: String, enum: ['tennis', 'leather', 'tape', 'rubber'], default: 'tennis' },
     venue: { type: String, default: null },
     city: { type: String, default: null },
     format: { type: String, default: 'T20' },
@@ -87,10 +104,12 @@ const tournamentSchema = new Schema(
     },
     start_date: { type: String, default: null },
     end_date: { type: String, default: null },
+    registration_date: { type: String, default: null },
     registration_deadline: { type: Date, default: null },
     points_win: { type: Number, default: 2 },
     points_tie: { type: Number, default: 1 },
     points_loss: { type: Number, default: 0 },
+    points_no_result: { type: Number, default: 1 },
     settings: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
@@ -123,6 +142,7 @@ const playerSchema = new Schema(
     team_id: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
     profile_id: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     full_name: { type: String, required: true },
+    photo_url: { type: String, default: null },
     jersey_number: { type: Number, default: null },
     role: { type: String, default: 'all_rounder' },
     batting_style: { type: String, default: null },
@@ -192,6 +212,7 @@ const matchSchema = new Schema(
     result_summary: { type: String, default: null },
     man_of_the_match_player_id: { type: Schema.Types.ObjectId, ref: 'Player', default: null },
     overs_per_innings: { type: Number, default: 20 },
+    rules: { type: Schema.Types.Mixed, default: {} },
     current_innings_number: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
@@ -256,3 +277,13 @@ scoreEventSchema.index({ innings_id: 1, created_at: 1 });
 export const ScoreEvent = mongoose.model('ScoreEvent', scoreEventSchema);
 
 export type ObjectId = Types.ObjectId;
+
+export const AuditLog = mongoose.model('AuditLog', new Schema({
+  tournament_id: { type: Schema.Types.ObjectId, ref: 'Tournament' },
+  actor_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  action: String, resource: String, reason: String,
+}, { timestamps: { createdAt: 'created_at', updatedAt: false } }));
+export const SupportReport = mongoose.model('SupportReport', new Schema({
+  user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  message: String, status: { type: String, enum: ['open', 'resolved'], default: 'open' },
+}, { timestamps: true }));

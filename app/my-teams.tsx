@@ -1,6 +1,8 @@
+import { createThemedStyles } from '../src/lib/theme';
+import { Text } from '../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../src/components/ui/GlassCard';
 import { GradientButton } from '../src/components/ui/GradientButton';
@@ -74,7 +76,7 @@ export default function MyTeamsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   header: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
   flex: { flex: 1 },

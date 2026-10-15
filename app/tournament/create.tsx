@@ -1,19 +1,20 @@
+import { Alert, TextInput } from '../../src/i18n';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Alert,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TournamentLogoField, TournamentProfileFields } from '../../src/components/tournament/TournamentProfileFields';
 import { KeyboardForm } from '../../src/components/ui/KeyboardForm';
 import { GradientButton } from '../../src/components/ui/GradientButton';
-import { createTournament } from '../../src/lib/tournaments';
+import { createTournament, validateTournamentProfile, type TournamentBallType } from '../../src/lib/tournaments';
 import { colors, radius } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 
@@ -25,7 +26,19 @@ export default function CreateTournamentScreen() {
   const [venue, setVenue] = useState('');
   const [format, setFormat] = useState('T20');
   const [overs, setOvers] = useState('20');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [organizerName, setOrganizerName] = useState(profile?.full_name ?? '');
+  const [organizerPhone, setOrganizerPhone] = useState(profile?.phone ?? '');
+  const [startDate, setStartDate] = useState('');
+  const [registrationDate, setRegistrationDate] = useState('');
+  const [closingDate, setClosingDate] = useState('');
+  const [ballType, setBallType] = useState<TournamentBallType>('tennis');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (profile?.full_name) setOrganizerName((current) => current || profile.full_name || '');
+    if (profile?.phone) setOrganizerPhone((current) => current || profile.phone || '');
+  }, [profile?.full_name, profile?.phone]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -34,6 +47,19 @@ export default function CreateTournamentScreen() {
     }
     if (!profile?.id) {
       Alert.alert('Sign in', 'Please sign in to create a tournament');
+      return;
+    }
+    const profileError = validateTournamentProfile({
+      organizerName,
+      organizerPhone,
+      startDate,
+      registrationDate,
+      closingDate,
+      ballType,
+      logoUrl,
+    });
+    if (profileError) {
+      Alert.alert('Required', profileError);
       return;
     }
 
@@ -52,6 +78,13 @@ export default function CreateTournamentScreen() {
       format,
       oversPerInnings: parseInt(overs, 10) || 20,
       status: 'registration',
+      logoUrl,
+      organizerName,
+      organizerPhone,
+      startDate,
+      registrationDate,
+      closingDate,
+      ballType,
     });
 
     setLoading(false);
@@ -80,6 +113,8 @@ export default function CreateTournamentScreen() {
         </View>
 
         <KeyboardForm contentContainerStyle={styles.formPad}>
+          <TournamentLogoField logoUrl={logoUrl} onLogo={setLogoUrl} featured />
+
           <View style={styles.freeBadge}>
             <Ionicons name="gift-outline" size={18} color={colors.green} />
             <Text style={styles.freeText}>100% free — no subscription needed</Text>
@@ -128,6 +163,24 @@ export default function CreateTournamentScreen() {
             ))}
           </View>
 
+          <TournamentProfileFields
+            logoUrl={logoUrl}
+            onLogo={setLogoUrl}
+            showLogo={false}
+            organizerName={organizerName}
+            onOrganizerName={setOrganizerName}
+            organizerPhone={organizerPhone}
+            onOrganizerPhone={setOrganizerPhone}
+            startDate={startDate}
+            onStartDate={setStartDate}
+            registrationDate={registrationDate}
+            onRegistrationDate={setRegistrationDate}
+            closingDate={closingDate}
+            onClosingDate={setClosingDate}
+            ballType={ballType}
+            onBallType={setBallType}
+          />
+
           <Text style={styles.label}>Overs per innings</Text>
           <TextInput
             style={styles.input}
@@ -150,7 +203,7 @@ export default function CreateTournamentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   header: {

@@ -1,3 +1,5 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import * as React from 'react';
 import {
   Modal,
@@ -5,7 +7,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,8 +28,7 @@ const WICKET_TYPES: {
   { type: 'stumped', label: 'Stumped', icon: 'flash', bowlerCredit: true },
   { type: 'hit_wicket', label: 'Hit wicket', icon: 'warning', bowlerCredit: true },
   { type: 'run_out', label: 'Run out', icon: 'walk', bowlerCredit: false },
-  { type: 'retired_hurt', label: 'Retired', icon: 'medkit-outline', bowlerCredit: false },
-  { type: 'other', label: 'Other', icon: 'ellipsis-horizontal', bowlerCredit: false },
+  { type: 'obstructing', label: 'Obstructing', icon: 'hand-left', bowlerCredit: false },
 ];
 
 export interface WicketSelection {
@@ -190,7 +191,7 @@ export function WicketPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,

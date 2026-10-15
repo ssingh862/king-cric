@@ -25,6 +25,11 @@ export interface MatchRules {
   widePenaltyRuns: number;
   noBallPenaltyRuns: number;
   freeHitOnNoBall: boolean;
+  wideCountsAsBall?: boolean;
+  noBallCountsAsBall?: boolean;
+  lastBatterStands?: boolean;
+  allowByes?: boolean;
+  allowLegByes?: boolean;
   superOverOvers: number;
   /** Batting squad size — drives all-out wicket cap. */
   battingSquadSize?: number;

@@ -20,8 +20,8 @@ export interface MatchOutcome {
   tournamentId: string;
 }
 
-export function matchRulesFromMatch(match: Pick<Match, 'overs_per_innings'>): MatchRules {
-  return rulesForFormat('custom', match.overs_per_innings);
+export function matchRulesFromMatch(match: Pick<Match, 'overs_per_innings' | 'rules'>): MatchRules {
+  return rulesForFormat('custom', match.overs_per_innings, match.rules);
 }
 
 async function fetchAllMatchEvents(matchId: string): Promise<ScoreEvent[]> {
@@ -54,14 +54,14 @@ function inningsLineFromReplay(
 }
 
 async function rulesForInningsTeam(
-  match: Pick<Match, 'overs_per_innings'>,
+  match: Pick<Match, 'overs_per_innings' | 'rules'>,
   battingTeamId: string
 ): Promise<MatchRules> {
-  const base = rulesForFormat('custom', match.overs_per_innings);
+  const base = rulesForFormat('custom', match.overs_per_innings, match.rules);
   const { players } = await fetchTeamPlayers(battingTeamId);
   const squadSize = players.length;
   if (squadSize > 0) {
-    return { ...base, maxWickets: maxWicketsForSquad(squadSize), battingSquadSize: squadSize };
+    return { ...base, maxWickets: maxWicketsForSquad(squadSize, base.lastBatterStands), battingSquadSize: squadSize };
   }
   return base;
 }

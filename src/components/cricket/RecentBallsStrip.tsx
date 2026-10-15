@@ -1,4 +1,6 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { ScrollView, StyleSheet,  View } from 'react-native';
 import type { ScoreEvent } from '../../types/database';
 import { dedupeScoreEvents } from '../../lib/scoring';
 import { colors } from '../../lib/theme';
@@ -47,7 +49,7 @@ export function RecentBallsStrip({ events }: RecentBallsStripProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: { marginBottom: 12 },
   title: { color: colors.textMuted, fontSize: 12, marginBottom: 8, fontWeight: '600' },
   empty: { color: colors.textDim, fontSize: 13, marginBottom: 12 },

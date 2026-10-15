@@ -1,3 +1,5 @@
+import type { MatchRules } from '../lib/cricket/types';
+
 export type UserRole = 'viewer' | 'player' | 'organizer' | 'admin';
 export type TournamentStatus = 'draft' | 'registration' | 'ongoing' | 'completed' | 'cancelled';
 export type MatchStatus = 'scheduled' | 'live' | 'completed' | 'abandoned' | 'no_result';
@@ -16,16 +18,26 @@ export interface Profile {
   avatar_url: string | null;
   role: UserRole;
   is_premium: boolean;
+  city?: string;
+  playing_role?: string;
+  batting_style?: string;
+  bowling_style?: string;
+  preferences?: { notifications?: boolean; scoringDefaults?: Partial<MatchRules> };
+
   expo_push_token: string | null;
 }
 
 export interface Tournament {
   id: string;
   organizer_id: string;
+  scorer_ids?: string[];
   name: string;
   slug: string;
   description: string | null;
   logo_url: string | null;
+  organizer_name?: string | null;
+  organizer_phone?: string | null;
+  ball_type?: string | null;
   venue: string | null;
   city: string | null;
   format: string;
@@ -34,6 +46,8 @@ export interface Tournament {
   status: TournamentStatus;
   start_date: string | null;
   end_date: string | null;
+  registration_date?: string | null;
+  registration_deadline?: string | null;
 }
 
 export interface Team {
@@ -53,6 +67,7 @@ export interface Player {
   team_id: string;
   profile_id: string | null;
   full_name: string;
+  photo_url?: string | null;
   jersey_number: number | null;
   role: string;
   is_captain: boolean;
@@ -73,6 +88,9 @@ export interface Match {
   result_summary: string | null;
   man_of_the_match_player_id: string | null;
   overs_per_innings: number;
+  rules?: Partial<MatchRules>;
+  tournament?: Tournament;
+  innings?: Innings[];
   team_a?: Team;
   team_b?: Team;
 }
@@ -123,7 +141,7 @@ export interface PointsTableRow {
   tied: number;
   points: number;
   net_run_rate: number;
-  team?: Team;
+  team?: Pick<Team, 'name'> & Partial<Team>;
 }
 
 export interface SubscriptionPlan {

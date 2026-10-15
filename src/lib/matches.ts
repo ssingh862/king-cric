@@ -1,3 +1,5 @@
+import type { Innings, Player } from '../types/database';
+import type { MatchRules } from './cricket/types';
 import { api, apiSafe } from './api';
 
 export async function createMatch(input: {
@@ -7,10 +9,12 @@ export async function createMatch(input: {
   venue?: string;
   scheduledAt?: string;
   oversPerInnings?: number;
+  rules?: Partial<MatchRules>;
 }) {
   const { data, error } = await apiSafe<{ id: string }>('/matches', {
     method: 'POST',
     body: JSON.stringify({
+      rules: input.rules,
       tournament_id: input.tournamentId,
       team_a_id: input.teamAId,
       team_b_id: input.teamBId,
@@ -40,7 +44,7 @@ export async function startInnings(input: {
   bowlerId: string;
   targetRuns?: number;
 }) {
-  const { data, error } = await apiSafe<Record<string, unknown>>(`/matches/${input.matchId}/innings`, {
+  const { data, error } = await apiSafe<Innings>(`/matches/${input.matchId}/innings`, {
     method: 'POST',
     body: JSON.stringify({
       batting_team_id: input.battingTeamId,
@@ -56,17 +60,17 @@ export async function startInnings(input: {
 }
 
 export async function fetchMatchInnings(matchId: string) {
-  const { data, error } = await apiSafe<Record<string, unknown>[]>(`/matches/${matchId}/innings`);
+  const { data, error } = await apiSafe<Innings[]>(`/matches/${matchId}/innings`);
   return { innings: data ?? [], error };
 }
 
 export async function fetchTeamPlayers(teamId: string) {
-  const { data, error } = await apiSafe<Record<string, unknown>[]>(`/matches/teams/${teamId}/players`);
+  const { data, error } = await apiSafe<Player[]>(`/matches/teams/${teamId}/players`);
   return { players: data ?? [], error };
 }
 
 export async function fetchActiveInnings(matchId: string) {
-  const { data, error } = await apiSafe<Record<string, unknown> | null>(`/matches/${matchId}/active-innings`);
+  const { data, error } = await apiSafe<Innings | null>(`/matches/${matchId}/active-innings`);
   return { innings: data, error };
 }
 

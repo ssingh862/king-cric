@@ -1,3 +1,5 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import { useRef, useState } from "react";
 import {
   Modal,
@@ -5,7 +7,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -219,7 +221,7 @@ function PlayerCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,

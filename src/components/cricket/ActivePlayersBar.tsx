@@ -1,4 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { Pressable, StyleSheet,  View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, radius, shadows } from '../../lib/theme';
 
@@ -105,7 +107,7 @@ export function ActivePlayersBar({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,

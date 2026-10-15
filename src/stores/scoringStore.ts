@@ -59,7 +59,7 @@ interface ScoringState {
   bowlerId: string | null;
   setInnings: (innings: Innings) => void;
   setMatchRules: (rules: MatchRules) => void;
-  setPlayers: (striker: string, nonStriker: string, bowler: string) => void;
+  setPlayers: (striker: string | null, nonStriker: string | null, bowler: string | null) => void;
   initFromInnings: (innings: Innings) => void;
   loadEvents: (inningsId: string) => Promise<void>;
   subscribeRealtime: (inningsId: string) => () => void;
@@ -87,13 +87,25 @@ const empty = {
 function applyCreaseFromEvents(
   innings: Innings | null,
   events: ScoreEvent[],
-  rules: MatchRules
+  rules: MatchRules,
+  selectedBowlerId?: string | null
 ) {
-  const snap = replayInnings(innings, dedupeScoreEvents(events), rules);
+  const unique = dedupeScoreEvents(events);
+  const snap = replayInnings(innings, unique, rules);
+  const lastLegal = [...unique].reverse().find((e) => e.is_legal_delivery);
+  const overJustFinished = !!lastLegal && lastLegal.ball_in_over === rules.ballsPerOver;
+  let bowlerId = snap.bowlerId;
+  if (
+    overJustFinished &&
+    selectedBowlerId &&
+    selectedBowlerId !== lastLegal?.bowler_player_id
+  ) {
+    bowlerId = selectedBowlerId;
+  }
   return {
     strikerId: snap.strikerId,
     nonStrikerId: snap.nonStrikerId,
-    bowlerId: snap.bowlerId,
+    bowlerId,
     freeHitActive: snap.freeHitNext,
   };
 }
@@ -106,15 +118,29 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
   setMatchRules: (matchRules) => set({ matchRules }),
 
   initFromInnings: (innings) => {
-    const { events, matchRules } = get();
+    const { matchRules } = get();
+    const events = get().innings?.id === innings.id ? get().events : [];
     set({
       innings,
+      events,
       ...applyCreaseFromEvents(innings, events, matchRules),
     });
   },
 
   setPlayers: (strikerId, nonStrikerId, bowlerId) =>
-    set({ strikerId, nonStrikerId, bowlerId }),
+    set((s) => ({
+      strikerId,
+      nonStrikerId,
+      bowlerId,
+      innings: s.innings
+        ? {
+            ...s.innings,
+            striker_player_id: strikerId,
+            non_striker_player_id: nonStrikerId,
+            current_bowler_id: bowlerId,
+          }
+        : s.innings,
+    })),
 
   syncPlayersToDb: async () => {
     const { innings, events, matchRules, strikerId, nonStrikerId, bowlerId } = get();
@@ -156,11 +182,11 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
     }
 
     const remaining = unique.filter((e) => e.id !== last.id);
-    const crease = applyCreaseFromEvents(innings, remaining, matchRules);
+    const crease = { strikerId: last.striker_player_id ?? null, nonStrikerId: last.non_striker_player_id ?? null, bowlerId: last.bowler_player_id ?? null, freeHitActive: replayInnings(innings, remaining, matchRules).freeHitNext };
     const snap = replayInnings(innings, remaining, matchRules);
 
     if (isApiConfigured()) {
-      await syncInningsToDb(innings, remaining, matchRules);
+      await syncInningsToDb(innings, remaining, matchRules, crease);
     }
 
     set({
@@ -185,8 +211,8 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
     if (!isApiConfigured()) return;
     const data = await api<ScoreEvent[]>(`/matches/innings/${inningsId}/score-events`);
     const events = dedupeScoreEvents(data ?? []);
-    const { innings, matchRules } = get();
-    set({ events, ...applyCreaseFromEvents(innings, events, matchRules) });
+    const { innings, matchRules, bowlerId } = get();
+    set({ events, ...applyCreaseFromEvents(innings, events, matchRules, bowlerId) });
   },
 
   subscribeRealtime: (inningsId) => {
@@ -213,20 +239,22 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
         set((s) => {
           if (s.events.some((e) => e.id === event.id)) return s;
           const merged = mergeScoreEvents(s.events, [event]);
-          const crease = applyCreaseFromEvents(s.innings, merged, s.matchRules);
+          const crease = applyCreaseFromEvents(s.innings, merged, s.matchRules, s.bowlerId);
           return {
             events: merged,
             strikerId: crease.strikerId ?? s.strikerId,
             nonStrikerId: crease.nonStrikerId ?? s.nonStrikerId,
-            bowlerId: crease.bowlerId ?? s.bowlerId,
+            bowlerId: crease.bowlerId,
             freeHitActive: crease.freeHitActive,
           };
         });
+      } else if (payload.type === 'UPDATE') {
+        set(s => { const events = s.events.map(e => e.id === payload.data.id ? payload.data : e); return { events, ...applyCreaseFromEvents(s.innings, events, s.matchRules, s.bowlerId) }; });
       } else if (payload.type === 'DELETE') {
         const removed = payload.data;
         set((s) => {
           const merged = s.events.filter((e) => e.id !== removed.id);
-          return { events: merged, ...applyCreaseFromEvents(s.innings, merged, s.matchRules) };
+          return { events: merged, ...applyCreaseFromEvents(s.innings, merged, s.matchRules, s.bowlerId) };
         });
       }
     };
@@ -287,9 +315,20 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       return { error: 'On a free hit only run out (or obstructing) is allowed' };
     }
 
+    if (isWicket && input.ballType === 'no_ball' && !canDismissOnFreeHit(wicketType)) return { error: 'Invalid dismissal on a no-ball' };
+    if (input.ballType === 'bye' && matchRules.allowByes === false || input.ballType === 'leg_bye' && matchRules.allowLegByes === false) return { error: 'This extra is disabled in match rules' };
     const unique = dedupeScoreEvents(events);
     const state = get().getSnapshot();
-    const legal = isLegalDelivery(input.ballType);
+    const lastLegal = [...unique].reverse().find((e) => e.is_legal_delivery);
+    if (
+      lastLegal &&
+      lastLegal.ball_in_over === matchRules.ballsPerOver &&
+      lastLegal.bowler_player_id === bowlerId
+    ) {
+      return { error: 'That bowler just finished the over. Choose someone else for the next over.' };
+    }
+    if (state.isInningsComplete) return { error: 'Innings complete. Undo the last delivery to correct it.' };
+    const legal = isLegalDelivery(input.ballType, matchRules);
     const maxBalls = maxLegalBalls(matchRules);
 
     if (legal && state.legalBalls >= maxBalls) {
@@ -315,8 +354,7 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       bowlerId,
     }, matchRules);
 
-    const crease = consolidateLoneBatter(
-      applyPostBallCrease(
+    const postCrease = applyPostBallCrease(
         strikerId,
         nonStrikerId,
         {
@@ -328,11 +366,13 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
         },
         payload.ball_in_over,
         legal,
-        matchRules.ballsPerOver
-      )
-    );
+        matchRules.ballsPerOver,
+        matchRules
+      );
+    const crease = matchRules.lastBatterStands && state.totalWickets + (isWicket ? 1 : 0) >= matchRules.maxWickets - 1
+      ? consolidateLoneBatter(postCrease) : postCrease;
 
-    const endOfOver = isLegalDelivery(input.ballType) && payload.ball_in_over === matchRules.ballsPerOver;
+    const endOfOver = isLegalDelivery(input.ballType, matchRules) && payload.ball_in_over === matchRules.ballsPerOver;
 
     const nextFreeHit =
       input.ballType === 'no_ball' && matchRules.freeHitOnNoBall
@@ -359,6 +399,7 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
         },
         strikerId: crease.strikerId,
         nonStrikerId: crease.nonStrikerId,
+        bowlerId: endOfOver ? null : bowlerId,
         freeHitActive: snap.freeHitNext,
       });
       return followUpAfterBall(isWicket, endOfOver, snap, matchRules, crease);
@@ -384,8 +425,11 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       events: newEvents,
       strikerId: crease.strikerId,
       nonStrikerId: crease.nonStrikerId,
-      bowlerId,
+      bowlerId: endOfOver ? null : bowlerId,
       freeHitActive: snap.freeHitNext,
+      innings: endOfOver && innings.current_bowler_id === bowlerId
+        ? { ...innings, current_bowler_id: null, striker_player_id: crease.strikerId, non_striker_player_id: crease.nonStrikerId }
+        : innings,
     });
 
     await get().syncPlayersToDb();
@@ -435,12 +479,12 @@ function followUpAfterBall(
 }
 
 /** Use tournament/match overs; squad size sets when the innings is all out. */
-export function initMatchRulesFromOvers(oversPerInnings: number, squadSize?: number) {
-  const rules = rulesForFormat('custom', oversPerInnings);
+export function initMatchRulesFromOvers(oversPerInnings: number, squadSize?: number, overrides?: Partial<MatchRules>) {
+  const rules = rulesForFormat('custom', oversPerInnings, overrides);
   if (squadSize != null && squadSize > 0) {
     return {
       ...rules,
-      maxWickets: maxWicketsForSquad(squadSize),
+      maxWickets: maxWicketsForSquad(squadSize, rules.lastBatterStands),
       battingSquadSize: squadSize,
     };
   }

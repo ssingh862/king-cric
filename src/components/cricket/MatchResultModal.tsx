@@ -1,4 +1,6 @@
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
+import { Modal, Platform, Pressable, StyleSheet,  View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MatchOutcome } from '../../lib/matchFlow';
@@ -54,7 +56,7 @@ export function MatchResultModal({ visible, outcome, onDone }: MatchResultModalP
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   overlay: {
     flex: 1,
     backgroundColor: colors.overlay,

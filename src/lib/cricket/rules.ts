@@ -23,17 +23,21 @@ export function runsFromBallType(type: BallType): number {
   return map[type] ?? 0;
 }
 
-export function isLegalDelivery(type: BallType): boolean {
-  return type !== 'wide' && type !== 'no_ball';
+export function isLegalDelivery(type: BallType, rules?: MatchRules): boolean {
+  if (type === 'wide') return rules?.wideCountsAsBall ?? false;
+  if (type === 'no_ball') return rules?.noBallCountsAsBall ?? false;
+  return true;
 }
 
 export function shouldRotateStrike(
   type: BallType,
   runsOffBat: number,
-  extras: number
+  extras: number,
+  rules?: MatchRules
 ): boolean {
   if (type === 'wide' || type === 'no_ball' || type === 'bye' || type === 'leg_bye') {
-    const total = runsOffBat + extras;
+    const penalty = type === 'wide' ? (rules?.widePenaltyRuns ?? 1) : type === 'no_ball' ? (rules?.noBallPenaltyRuns ?? 1) : 0;
+    const total = runsOffBat + extras - penalty;
     return shouldRotateFromRuns(total);
   }
   return shouldRotateFromRuns(runsOffBat);
@@ -71,7 +75,7 @@ export function resolveExtras(input: BallInput, rules: MatchRules): number {
 }
 
 export function runsCountToBatsman(type: BallType, runsOffBat: number): number {
-  if (['bye', 'leg_bye', 'wide', 'no_ball'].includes(type)) return 0;
+  if (['bye', 'leg_bye', 'wide'].includes(type)) return 0;
   return runsOffBat;
 }
 
@@ -80,16 +84,14 @@ export function maxLegalBalls(rules: MatchRules): number {
 }
 
 /** Teams under 11: everyone can bat and get out. Standard 11+: all out at 10 wickets. */
-export function maxWicketsForSquad(squadSize: number): number {
-  if (squadSize <= 1) return 1;
-  if (squadSize >= 11) return 10;
-  return squadSize;
+export function maxWicketsForSquad(squadSize: number, lastBatterStands = false): number {
+  return Math.max(1, squadSize - (lastBatterStands ? 0 : 1));
 }
 
 export function allOutWicketsLabel(squadSize?: number, maxWickets?: number): string {
   const max = maxWickets ?? (squadSize ? maxWicketsForSquad(squadSize) : 10);
   if (squadSize != null && squadSize < 11) {
-    return `all ${squadSize} players bat · out at ${max} wickets`;
+    return `${squadSize}-player side · all out at ${max} wickets`;
   }
   return `all out at ${max} wickets`;
 }
@@ -112,5 +114,5 @@ export function isInningsComplete(
 }
 
 export function canDismissOnFreeHit(wicketType: WicketType | null): boolean {
-  return wicketType === 'run_out' || wicketType === 'obstructing' || wicketType === 'timed_out';
+  return wicketType === 'run_out' || wicketType === 'obstructing';
 }

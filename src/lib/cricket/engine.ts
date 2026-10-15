@@ -75,13 +75,14 @@ export function applyPostBallCrease(
   },
   ballInOverAfter: number,
   isLegal: boolean,
-  ballsPerOver: number
+  ballsPerOver: number,
+  rules?: MatchRules
 ): { strikerId: string | null; nonStrikerId: string | null; endOfOver: boolean } {
   let striker = strikerId;
   let nonStriker = nonStrikerId;
   const endOfOver = isLegal && ballInOverAfter === ballsPerOver;
 
-  if (shouldRotateStrike(input.ballType, input.runsOffBat, input.extras)) {
+  if (shouldRotateStrike(input.ballType, input.runsOffBat, input.extras, rules)) {
     const r = rotateStrike(striker, nonStriker);
     striker = r.strikerId;
     nonStriker = r.nonStrikerId;
@@ -164,11 +165,11 @@ export function replayInnings(
     if (e.ball_type === 'no_ball' && rules.freeHitOnNoBall) {
       freeHitNext = true;
     }
-    if (e.is_legal_delivery) {
+    if (e.ball_type !== 'wide' && e.ball_type !== 'no_ball') {
       freeHitNext = false;
     }
 
-    if (shouldRotateStrike(e.ball_type, runsOffBat, extras)) {
+    if (shouldRotateStrike(e.ball_type, runsOffBat, extras, rules)) {
       const r = rotateStrike(striker, nonStriker);
       striker = r.strikerId;
       nonStriker = r.nonStrikerId;
@@ -191,6 +192,14 @@ export function replayInnings(
   }
 
   const lastEvent = ordered[ordered.length - 1];
+  const overJustFinished =
+    !!lastEvent?.is_legal_delivery && lastEvent.ball_in_over === ballsPerOver;
+  if (overJustFinished) {
+    const selectedNext = innings?.current_bowler_id ?? null;
+    bowler =
+      selectedNext && selectedNext !== lastEvent.bowler_player_id ? selectedNext : null;
+  }
+
   if (!striker && lastEvent?.is_wicket && innings?.striker_player_id) {
     striker = innings.striker_player_id;
     nonStriker = innings.non_striker_player_id ?? nonStriker;
@@ -241,22 +250,15 @@ export function buildBallPayload(
 ) {
   const runsOffBat = resolveRunsOffBat(input);
   const extras = resolveExtras(input, rules);
-  const legal = isLegalDelivery(input.ballType);
+  const legal = isLegalDelivery(input.ballType, rules);
   const wicketType = normalizeWicketType(input.wicketType);
   const isWicket = input.isWicket ?? input.ballType === 'wicket';
 
-  const next = legal
-    ? computeNextBall(state, rules)
-    : {
-        overNumber: state.overNumber || 1,
-        ballNumber: state.ballInOver || 1,
-        ballInOver: state.ballInOver || 1,
-      };
-
-  const ballInOver = legal ? next.ballInOver : state.ballInOver || 1;
+  const next = computeNextBall(state, rules);
+  const ballInOver = next.ballInOver;
 
   return {
-    over_number: legal ? next.overNumber : state.overNumber || 1,
+    over_number: next.overNumber,
     ball_number: ballInOver,
     ball_in_over: ballInOver,
     ball_type: input.ballType,

@@ -1,5 +1,7 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet,  View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { ScoreEvent } from "../../types/database";
 import {
@@ -30,7 +32,7 @@ const BATTING_COLS: ColDef[] = [
 ];
 
 const BOWLING_COLS: ColDef[] = [
-  { label: "Bowler", width: 88 },
+  { label: "Bowler", width: 118 },
   { label: "O", width: 40 },
   { label: "M", width: 28 },
   { label: "R", width: 32 },
@@ -121,6 +123,40 @@ function BatsmanCell({
   );
 }
 
+function BowlerCell({
+  width,
+  name,
+  isBowling,
+}: {
+  width: number;
+  name: string;
+  isBowling: boolean;
+}) {
+  return (
+    <View style={[styles.batsmanCell, { width }]}>
+      {isBowling ? (
+        <View style={styles.ballIcon}>
+          <MaterialCommunityIcons name="baseball" size={12} color="#fff" />
+        </View>
+      ) : (
+        <View style={styles.batSpacer} />
+      )}
+      <Text
+        style={[
+          styles.cell,
+          styles.cellBold,
+          styles.cellLeft,
+          styles.batsmanName,
+          isBowling && styles.bowlingName,
+        ]}
+        numberOfLines={1}
+      >
+        {name}
+      </Text>
+    </View>
+  );
+}
+
 export function MatchPlayerStats({
   events,
   playerNames,
@@ -136,21 +172,27 @@ export function MatchPlayerStats({
   });
   const bowlersRaw = bowlingStatsForDisplay(uniqueEvents, bowlerId);
   const bowlers = useMemo(() => {
-    if (!bowlerId) return bowlersRaw;
-    if (bowlersRaw.some((b) => b.playerId === bowlerId)) return bowlersRaw;
-    return [
-      ...bowlersRaw,
-      {
-        playerId: bowlerId,
-        overs: "0.0",
-        maidens: 0,
-        runs: 0,
-        wickets: 0,
-        economy: "0.00",
-        wides: 0,
-        noBalls: 0,
-      },
-    ];
+    const withCurrent =
+      !bowlerId || bowlersRaw.some((b) => b.playerId === bowlerId)
+        ? bowlersRaw
+        : [
+            {
+              playerId: bowlerId,
+              overs: "0.0",
+              maidens: 0,
+              runs: 0,
+              wickets: 0,
+              economy: "0.00",
+              wides: 0,
+              noBalls: 0,
+            },
+            ...bowlersRaw,
+          ];
+    if (!bowlerId) return withCurrent;
+    const current = withCurrent.find((b) => b.playerId === bowlerId);
+    return current
+      ? [current, ...withCurrent.filter((b) => b.playerId !== bowlerId)]
+      : withCurrent;
   }, [bowlersRaw, bowlerId]);
   const hasCrease = !!(strikerId || nonStrikerId || bowlerId);
   if (!uniqueEvents.length && !hasCrease) return null;
@@ -191,9 +233,11 @@ export function MatchPlayerStats({
           <StatHeader cols={BOWLING_COLS} />
           {bowlers.map((b) => (
             <View key={b.playerId} style={styles.dataRow}>
-              <Cell width={BOWLING_COLS[0].width} alignLeft bold>
-                {name(b.playerId)}
-              </Cell>
+              <BowlerCell
+                width={BOWLING_COLS[0].width}
+                name={name(b.playerId)}
+                isBowling={b.playerId === bowlerId}
+              />
               <Cell width={BOWLING_COLS[1].width} bold>
                 {b.overs}
               </Cell>
@@ -209,13 +253,13 @@ export function MatchPlayerStats({
       </ScrollView>
 
       <Text style={styles.legend}>
-        O = overs.balls · * not out · orange bat = facing the ball
+        O = overs.balls · * not out · orange bat = facing · blue ball = bowling now
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginBottom: 20,
     padding: 14,
@@ -279,6 +323,16 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   batSpacer: { width: 20, flexShrink: 0 },
+  ballIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.blue,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   batsmanName: { flex: 1, minWidth: 0 },
+  bowlingName: { color: colors.blue },
   legend: { color: colors.textDim, fontSize: 10, marginTop: 12 },
 });

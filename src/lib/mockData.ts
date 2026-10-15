@@ -1,4 +1,6 @@
-/** Demo data when Supabase is not configured */
+import type { Tournament } from '../types/database';
+
+/** Demo data when the API is not configured */
 export const MOCK_LIVE_MATCHES = [
   {
     id: 'demo-match-1',
@@ -21,7 +23,7 @@ export const MOCK_COMPLETED_MATCHES = [
   },
 ];
 
-export const MOCK_TOURNAMENTS = [
+export const MOCK_TOURNAMENTS: (Pick<Tournament, 'id' | 'name' | 'city' | 'format' | 'status' | 'overs_per_innings' | 'max_teams' | 'venue' | 'start_date'> & Partial<Tournament>)[] = [
   {
     id: 'demo-t1',
     name: 'Gully Premier League 2026',

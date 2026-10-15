@@ -1,5 +1,8 @@
+import { Alert } from '../../i18n';
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet,  View } from 'react-native';
 import type { ScoreEvent } from '../../types/database';
 import { getBallsInCurrentOver } from '../../lib/inningsSync';
 import { formatOverSummary } from '../../lib/cricket/overSummary';
@@ -66,7 +69,7 @@ export function CurrentOverPanel({ events, onUndoLast, disabled }: CurrentOverPa
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   wrap: {
     marginBottom: 12,
     padding: 12,

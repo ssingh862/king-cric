@@ -1,8 +1,11 @@
+import { createThemedStyles } from '../../lib/theme';
+import { Text } from '../../i18n';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet,  View } from 'react-native';
 import { router } from 'expo-router';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import { LiveBadge } from '../ui/LiveBadge';
+import { matchDayKey, matchDayParts } from '../../lib/matchDays';
 import { colors, radius, shadows } from '../../lib/theme';
 
 interface TeamInfo {
@@ -17,11 +20,22 @@ interface LiveMatchCardProps {
     id: string;
     status: string;
     result_summary?: string | null;
+    scheduled_at?: string | null;
+    innings?: { batting_team_id: string; total_runs: number; total_wickets: number; total_overs: number }[];
     team_a?: TeamInfo;
     team_b?: TeamInfo;
     tournament?: { name: string; city?: string | null };
   };
   index?: number;
+}
+
+function MatchWhen({ value }: { value?: string | null }) {
+  const parts = matchDayParts(matchDayKey(value));
+  return (
+    <Text style={styles.when}>
+      {parts.prefix ? <>{parts.prefix}{' · '}{parts.date}</> : parts.date}
+    </Text>
+  );
 }
 
 export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
@@ -33,9 +47,12 @@ export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
       <Pressable onPress={() => router.push(`/match/${match.id}`)}>
         <View style={[styles.card, shadows.card]}>
           <View style={styles.header}>
-            <Text style={styles.tournament} numberOfLines={1}>
-              {match.tournament?.name ?? 'Tournament'}
-            </Text>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.tournament} numberOfLines={1}>
+                {match.tournament?.name ?? 'Tournament'}
+              </Text>
+              <MatchWhen value={match.scheduled_at} />
+            </View>
             {match.status === 'live' && <LiveBadge />}
             {match.status === 'scheduled' && (
               <View style={styles.scheduledBadge}>
@@ -62,6 +79,7 @@ export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
             </View>
           </View>
 
+          {!!match.innings?.length && <View style={{gap:8,marginTop:16,paddingTop:14,borderTopWidth:1,borderTopColor:colors.cardBorder}}>{match.innings.map(inn=><View key={inn.batting_team_id} style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}><Text style={{color:colors.textMuted,fontSize:12}}>{inn.batting_team_id===match.team_a?.id?teamA:teamB}</Text><Text style={{color:colors.text,fontWeight:'800',fontSize:20}}>{inn.total_runs}/{inn.total_wickets} <Text style={{fontSize:11,fontWeight:'500',color:colors.textMuted}}>({Number(inn.total_overs).toFixed(1)})</Text></Text></View>)}</View>}
           {match.result_summary ? (
             <Text style={styles.summary} numberOfLines={3}>
               {match.result_summary}
@@ -80,7 +98,7 @@ export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles({
   card: {
     borderRadius: radius.lg,
     padding: 16,
@@ -98,9 +116,13 @@ const styles = StyleSheet.create({
   tournament: {
     color: colors.textMuted,
     fontSize: 12,
-    flex: 1,
-    marginRight: 8,
     fontWeight: '600',
+  },
+  when: {
+    color: colors.orange,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
   },
   scheduledBadge: {
     backgroundColor: colors.surface,
