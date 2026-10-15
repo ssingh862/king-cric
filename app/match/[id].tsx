@@ -419,11 +419,7 @@ export default function MatchScreen() {
             await queryClient.invalidateQueries({
               queryKey: ["matches", "completed"],
             });
-            if (tournamentId) {
-              router.replace(`/tournament/${tournamentId}`);
-            } else {
-              router.back();
-            }
+            router.back();
           },
         },
       ],

@@ -1,16 +1,21 @@
-import { ownsTeam } from '../middleware/ownership';
+import { ClubEntry } from '../models/clubs';
+import { ownsTeam, ownsTournament } from '../middleware/ownership';
 import { Router } from 'express';
 import { requireAuth, type AuthRequest } from '../middleware/auth';
 import {
+  Innings,
   Match,
   Player,
+  ScoreEvent,
   Team,
   Tournament,
   TournamentRegistration,
   PointsTable,
   toApi,
 } from '../models';
+import { recalculateTournamentPoints } from '../services/pointsTable';
 import { tournamentSummary } from '../utils/serialize';
+import { squadLockInfo } from '../services/squadSync';
 
 const router = Router();
 
@@ -74,11 +79,14 @@ router.get('/:id', async (req, res) => {
 
   const players = await Player.find({ team_id: team._id }).sort({ jersey_number: 1 });
   const tournament = await Tournament.findById(team.tournament_id);
+  const lock = await squadLockInfo(team._id);
 
   res.json({
     ...toApi(team),
     players: players.map((p) => toApi(p)),
     tournament: tournament ? toApi(tournament) : null,
+    squad_locked: lock.locked,
+    squad_lock_reason: lock.reason,
   });
 });
 
@@ -171,14 +179,26 @@ router.patch('/:id', requireAuth, async (req, res) => {
 });
 
 router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
-  if (!await ownsTeam(req, res, req.params.id)) return;
-  if (await Match.exists({ $or: [{ team_a_id: req.params.id }, { team_b_id: req.params.id }] })) {
-    res.status(409).json({ error: 'Delete this team’s matches first to preserve scorecards' }); return;
+  const team = await Team.findById(req.params.id);
+  if (!team) { res.status(404).json({ error: 'Team not found' }); return; }
+  if (!await ownsTournament(req, res, team.tournament_id)) return;
+  const matches = await Match.find({ $or: [{ team_a_id: team._id }, { team_b_id: team._id }] });
+  if (matches.some((match) => match.status !== 'scheduled')) {
+    res.status(409).json({ error: 'This team has a live or finished match. You can remove it only before a match goes live.' });
+    return;
   }
-  await Player.deleteMany({ team_id: req.params.id });
-  await TournamentRegistration.deleteMany({ team_id: req.params.id });
-  await PointsTable.deleteMany({ team_id: req.params.id });
-  await Team.findByIdAndDelete(req.params.id);
+  for (const match of matches) {
+    const innings = await Innings.find({ match_id: match._id });
+    await ScoreEvent.deleteMany({ innings_id: { $in: innings.map((row) => row._id) } });
+    await Innings.deleteMany({ match_id: match._id });
+    await match.deleteOne();
+  }
+  await Player.deleteMany({ team_id: team._id });
+  await TournamentRegistration.deleteMany({ team_id: team._id });
+  await PointsTable.deleteMany({ team_id: team._id });
+  await ClubEntry.updateMany({ team_id: team._id }, { $set: { status: 'declined' }, $unset: { team_id: 1, member_ids: 1 } });
+  await team.deleteOne();
+  await recalculateTournamentPoints(String(team.tournament_id));
   res.status(204).send();
 });
 export default router;

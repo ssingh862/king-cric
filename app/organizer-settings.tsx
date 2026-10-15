@@ -3,7 +3,7 @@ import { Image, Platform, Pressable, Share, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../src/lib/api';
-import { Text } from '../src/i18n';
+import { Alert, Text } from '../src/i18n';
 import { colors, createThemedStyles } from '../src/lib/theme';
 import { Page, Card, Field, Button, LinkRow, styles } from '../src/components/settings/SettingsUI';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -167,7 +167,7 @@ export default function OrganizerSettings() {
             ))}
           </Card>
           <Card title="Teams">
-            <Text style={styles.sub}>Add a team to this tournament. It is approved right away. You can still approve teams that other people add.</Text>
+            <Text style={styles.sub}>Add a team to this tournament. It is approved right away. Remove deletes the team before a match goes live. It does not leave the team pending.</Text>
             <Field label="Team name" value={teamName} onChange={setTeamName} />
             <Button title="Add team" busy={busy} onPress={() => void run(async () => {
               if (!teamName.trim()) throw new Error('Enter the team name');
@@ -180,8 +180,13 @@ export default function OrganizerSettings() {
                   <Text style={styles.rowTitle}>{team.name}</Text>
                   <Text style={[ui.meta, { color: team.is_approved ? colors.green : colors.gold }]}>{team.is_approved ? 'Approved' : 'Pending'}</Text>
                 </View>
-                <Pressable disabled={busy} onPress={() => void run(() => mutate('/approve', { teamId: team.id, approved: !team.is_approved }))} style={[ui.chip, team.is_approved && ui.chipMuted]}>
-                  <Text style={ui.chipText}>{team.is_approved ? 'Remove' : 'Approve'}</Text>
+                {!team.is_approved ? (
+                  <Pressable disabled={busy} onPress={() => void run(() => mutate('/approve', { teamId: team.id, approved: true }))} style={ui.chip}>
+                    <Text style={ui.chipText}>Approve</Text>
+                  </Pressable>
+                ) : null}
+                <Pressable disabled={busy} onPress={() => Alert.alert('Remove team?', 'Remove this team before a match goes live? Scheduled matches for this team will also be removed.', [{ text: 'Keep team', style: 'cancel' }, { text: 'Remove team', style: 'destructive', onPress: () => void run(() => api(`/teams/${team.id}`, { method: 'DELETE' })) }])} style={[ui.chip, ui.chipMuted]}>
+                  <Text style={ui.chipText}>Remove</Text>
                 </Pressable>
               </View>
             )) : <Text style={styles.sub}>No items yet.</Text>}

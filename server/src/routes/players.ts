@@ -76,6 +76,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
   }
 
   if (!await ownsTeam(req, res, player.team_id)) return;
+  if ('profile_id' in req.body) { res.status(400).json({error:'Link accounts through a player invitation'}); return; }
   const allowed = [
     'full_name',
     'jersey_number',
@@ -84,7 +85,6 @@ router.patch('/:id', requireAuth, async (req, res) => {
     'is_wicket_keeper',
     'batting_style',
     'bowling_style',
-    'profile_id',
     'photo_url',
   ] as const;
 

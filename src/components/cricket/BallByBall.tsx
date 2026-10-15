@@ -65,7 +65,7 @@ export function BallByBall({ matchId, teamAId, teamBId }: { matchId: string; tea
               <Text style={[styles.resultText, styles[`${result.tone}Text`]]}>{result.label}{result.extra > 0 ? `+${result.extra}` : ''}</Text>
             </View>
             <Text style={styles.detail}>
-              {names.get(ball.bowler_player_id) ?? 'Bowler'} <Text>to</Text> {names.get(ball.striker_player_id) ?? 'Batter'}
+              {names.get(ball.bowler_player_id ?? '') ?? 'Bowler'} <Text>to</Text> {names.get(ball.striker_player_id ?? '') ?? 'Batter'}
               {dismissal ? <> · <Text>{dismissal}</Text></> : null}
             </Text>
           </View>

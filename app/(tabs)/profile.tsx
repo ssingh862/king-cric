@@ -14,6 +14,7 @@ const MENU = [
   { icon: 'add-circle' as const, label: 'Create Tournament', route: '/tournament/create', color: colors.orange },
   { icon: 'trophy' as const, label: 'My Tournaments', route: '/(tabs)/tournaments', color: colors.gold },
   { icon: 'people' as const, label: 'My Teams', route: '/my-teams', color: colors.blue },
+  { icon: 'mail' as const, label: 'Invitations', route: '/invitations', color: colors.orange },
   { icon: 'settings' as const, label: 'Settings', route: '/settings', color: colors.textMuted },
 ];
 
@@ -31,6 +32,7 @@ export default function ProfileScreen() {
               </Text>
             </LinearGradient>}
             <Text style={styles.name}>{profile?.full_name ?? 'Cricket Fan'}</Text>
+            <Text selectable style={styles.phone}>KingCric ID: KC-{profile?.id}</Text>
             <Text style={styles.phone}>{userEmail ?? profile?.phone ?? '—'}</Text>
             <View style={styles.premiumBadge}>
               <Ionicons name="checkmark-circle" size={14} color={colors.green} />
@@ -43,7 +45,7 @@ export default function ProfileScreen() {
               <Pressable
                 key={item.label}
                 style={styles.menuRow}
-                onPress={() => item.route && router.push(item.route as never)}
+                onPress={() => item.route && (item.route.startsWith('/(tabs)') ? router.navigate(item.route as never) : router.push(item.route as never))}
               >
                 <Ionicons name={item.icon} size={22} color={item.color} />
                 <Text style={styles.menuLabel}>{item.label}</Text>

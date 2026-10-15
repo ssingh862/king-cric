@@ -152,7 +152,7 @@ export default function MatchSetupScreen() {
     store.setMatchRules(initMatchRulesFromOvers(match?.overs_per_innings ?? 20, squadSize));
     store.initFromInnings(innings);
     await store.loadEvents(innings.id);
-    router.replace(`/score/${matchId}`);
+    router.push(`/score/${matchId}`);
   };
 
   if (isLoading) {

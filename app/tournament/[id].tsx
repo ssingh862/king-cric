@@ -16,7 +16,7 @@ import { MOCK_TOURNAMENTS } from '../../src/lib/mockData';
 import { deleteMatch } from '../../src/lib/matches';
 import { recalculateTournamentPoints } from '../../src/lib/pointsTable';
 import { canManageTournament } from '../../src/lib/permissions';
-import { api, isApiConfigured } from '../../src/lib/api';
+import { api, apiSafe, isApiConfigured } from '../../src/lib/api';
 import { ballTypeLabel, formatTournamentDate } from '../../src/lib/tournaments';
 import { groupMatchesByDate, matchDayParts } from '../../src/lib/matchDays';
 import { CompletedMatchRow } from '../../src/components/cricket/CompletedMatchRow';
@@ -190,9 +190,13 @@ export default function TournamentScreen() {
             {!canManage && isApiConfigured() ? (
               <GlassCard style={{ marginBottom: 20 }}>
                 <Text style={styles.viewerHint}>
-                  You are viewing as a fan. Live scores, results, and points are public. Only the
-                  tournament organizer can add teams, create matches, or score.
+                  Scores and points are public. To play as captain, create your team first. The organizer then invites that team into this tournament.
                 </Text>
+                <GradientButton
+                  title="Create team"
+                  onPress={() => router.push('/clubs' as never)}
+                  style={{ marginTop: 16 }}
+                />
               </GlassCard>
             ) : null}
 
@@ -200,23 +204,54 @@ export default function TournamentScreen() {
               <>
                 <Text style={styles.sectionTitle}>Registered teams</Text>
                 {teams.map((team) => (
-                  <Pressable
-                    key={team.id}
-                    onPress={() => router.push(`/team/${team.id}`)}
-                    onLongPress={
-                      canManage
-                        ? () => router.push({ pathname: '/team/edit', params: { id: team.id } })
-                        : undefined
-                    }
-                  >
-                    <GlassCard style={{ marginBottom: 8 }}>
+                  <GlassCard key={team.id} style={{ marginBottom: 8 }}>
                       <View style={styles.teamRow}>
+                        <Pressable
+                          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                          onPress={() => router.push(`/team/${team.id}`)}
+                          onLongPress={
+                            canManage
+                              ? () => router.push({ pathname: '/team/edit', params: { id: team.id } })
+                              : undefined
+                          }
+                        >
                         <View style={[styles.teamDot, { backgroundColor: team.primary_color ?? colors.orange }]} />
                         <Text style={styles.teamName}>{team.name}</Text>
+                        </Pressable>
+                        {canManage ? (
+                          <Pressable
+                            hitSlop={8}
+                            accessibilityLabel="Remove team"
+                            onPress={() =>
+                              Alert.alert(
+                                'Remove team?',
+                                'Remove this team before a match goes live? Scheduled matches for this team will also be removed.',
+                                [
+                                  { text: 'Keep team', style: 'cancel' },
+                                  {
+                                    text: 'Remove team',
+                                    style: 'destructive',
+                                    onPress: async () => {
+                                      const { error } = await apiSafe(`/teams/${team.id}`, { method: 'DELETE' });
+                                      if (error) {
+                                        Alert.alert('Could not remove team', error);
+                                        return;
+                                      }
+                                      await queryClient.invalidateQueries({ queryKey: ['tournament-teams', id] });
+                                      await queryClient.invalidateQueries({ queryKey: ['tournament-matches', id] });
+                                      await queryClient.invalidateQueries({ queryKey: ['points', id] });
+                                    },
+                                  },
+                                ]
+                              )
+                            }
+                          >
+                            <Ionicons name="trash-outline" size={18} color={colors.live} />
+                          </Pressable>
+                        ) : null}
                         <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
                       </View>
                     </GlassCard>
-                  </Pressable>
                 ))}
               </>
             )}
@@ -336,6 +371,7 @@ export default function TournamentScreen() {
               </>
             )}
 
+            {canManage && <GradientButton title="Add existing team" onPress={()=>router.push({pathname:'/tournament/add-team',params:{tournamentId:id}} as never)} style={{marginTop:20}}/>}
             {canManage && (
               <GradientButton
                 title="Register Team"
@@ -360,7 +396,7 @@ export default function TournamentScreen() {
             )}
             <GradientButton
               title="View all matches"
-              onPress={() => router.push('/(tabs)/live')}
+              onPress={() => router.navigate('/(tabs)/live')}
               variant="outline"
               style={{ marginTop: 12 }}
             />

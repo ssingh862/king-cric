@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import { Text as NativeText, type TextProps } from 'react-native';
 import { usePreferences } from '../stores/preferencesStore';
 import { translate } from './catalog';
+import { revealFocusedField } from '../components/ui/KeyboardForm';
 export function useTranslation() {
   const language=usePreferences(s=>s.language);
   return {language,t:(text:string)=>translate(text,language)};
@@ -15,7 +16,7 @@ export const Text = forwardRef<NativeText,TextProps>(function LocalizedText({chi
 import { TextInput as NativeTextInput, type TextInputProps, Alert as NativeAlert } from 'react-native';
 export const TextInput = forwardRef<NativeTextInput,TextInputProps>(function LocalizedInput(props,ref){
   const {t}=useTranslation();
-  return <NativeTextInput {...props} ref={ref} placeholder={props.placeholder?t(props.placeholder):undefined} accessibilityLabel={props.accessibilityLabel?t(props.accessibilityLabel):undefined}/>;
+  return <NativeTextInput {...props} ref={ref} placeholder={props.placeholder?t(props.placeholder):undefined} accessibilityLabel={props.accessibilityLabel?t(props.accessibilityLabel):undefined} onFocus={(event) => { props.onFocus?.(event); revealFocusedField(); }}/>;
 });
 export const Alert: typeof NativeAlert = {
   ...NativeAlert,

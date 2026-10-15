@@ -1,3 +1,4 @@
+import { ClubEntry } from '../models/clubs';
 import { ownsTournament } from '../middleware/ownership';
 import { Router } from 'express';
 import { requireAuth, optionalAuth, type AuthRequest } from '../middleware/auth';
@@ -211,6 +212,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   await Team.deleteMany({ tournament_id: req.params.id });
   await PointsTable.deleteMany({ tournament_id: req.params.id });
   await TournamentRegistration.deleteMany({ tournament_id: req.params.id });
+  await ClubEntry.deleteMany({tournament_id:req.params.id});
   await Tournament.findByIdAndDelete(req.params.id);
   res.status(204).send();
 });

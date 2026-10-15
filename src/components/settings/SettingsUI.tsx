@@ -2,7 +2,8 @@ import { TextInput } from '../../i18n';
 import { colors, createThemedStyles, shadows } from '../../lib/theme';
 import type { ReactNode } from 'react';
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, View } from 'react-native';
+import { KeyboardForm } from '../ui/KeyboardForm';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,7 +63,7 @@ export function Page({ title, children, onBack }: { title: string; children: Rea
   const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.page}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+      <KeyboardForm contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
           <Pressable accessibilityLabel={t('Back')} style={styles.back} onPress={() => onBack ? onBack() : router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
@@ -70,7 +71,7 @@ export function Page({ title, children, onBack }: { title: string; children: Rea
           <Text style={styles.title}>{title}</Text>
         </View>
         {children}
-      </ScrollView>
+      </KeyboardForm>
     </SafeAreaView>
   );
 }
@@ -102,12 +103,12 @@ export function Card({ title, children }: { title?: string; children: ReactNode 
   return <View style={styles.card}>{title ? <Text style={styles.heading}>{title}</Text> : null}{children}</View>;
 }
 
-export function Field({ label, value, onChange, secure = false, multiline = false }: { label: string; value: string; onChange: (v: string) => void; secure?: boolean; multiline?: boolean }) {
+export function Field({ label, value, onChange, secure = false, multiline = false, keyboard = 'default' }: { label: string; value: string; onChange: (v: string) => void; secure?: boolean; multiline?: boolean; keyboard?: 'default' | 'email-address' }) {
   const { t } = useTranslation();
   return (
     <>
       <Text style={styles.label}>{label}</Text>
-      <TextInput accessibilityLabel={t(label)} style={[styles.input, multiline && { minHeight: 96, textAlignVertical: 'top' }]} value={value} onChangeText={onChange} secureTextEntry={secure} multiline={multiline} autoCapitalize="none" />
+      <TextInput accessibilityLabel={t(label)} style={[styles.input, multiline && { minHeight: 96, textAlignVertical: 'top' }]} value={value} onChangeText={onChange} secureTextEntry={secure} multiline={multiline} autoCapitalize="none" autoCorrect={keyboard !== 'email-address'} keyboardType={keyboard} />
     </>
   );
 }

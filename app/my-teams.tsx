@@ -29,6 +29,9 @@ export default function MyTeamsScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+          <GradientButton title="Create team" onPress={()=>router.push('/clubs' as never)} style={{marginBottom:12}}/>
+          <GradientButton title="Invitations" variant="outline" onPress={()=>router.push('/invitations' as never)} style={{marginBottom:20}}/>
+          <Text style={styles.teamName}>Tournament squads</Text>
           {!configured ? (
             <GlassCard>
               <Text style={styles.body}>
@@ -60,12 +63,11 @@ export default function MyTeamsScreen() {
           ) : (
             <GlassCard>
               <Text style={styles.body}>
-                You have not registered a team yet. Open a tournament and tap Register Team, or create
-                your own league.
+                You have not created a team yet. Tap Create team, enter the team name and city, then add players. A tournament organizer invites that team; accept the invite under Invitations.
               </Text>
               <GradientButton
-                title="Browse tournaments"
-                onPress={() => router.replace('/(tabs)/tournaments')}
+                title="Create team"
+                onPress={() => router.push('/clubs' as never)}
                 style={{ marginTop: 16 }}
               />
             </GlassCard>

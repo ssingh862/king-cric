@@ -23,7 +23,8 @@ interface AuthState {
   signUpWithEmail: (
     email: string,
     password: string,
-    fullName: string
+    fullName: string,
+    avatarUrl?: string | null
   ) => Promise<{ error: string | null; needsConfirmation?: boolean }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   loadProfile: () => Promise<void>;
@@ -73,7 +74,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signUpWithEmail: async (email, password, fullName) => {
+  signUpWithEmail: async (email, password, fullName, avatarUrl) => {
     if (!isApiConfigured()) {
       return { error: 'API is not configured. Add EXPO_PUBLIC_API_URL to .env and restart the app.' };
     }
@@ -86,6 +87,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           email: email.trim().toLowerCase(),
           password,
           full_name: fullName.trim(),
+          ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         }),
       });
 

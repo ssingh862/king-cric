@@ -105,6 +105,7 @@ const tournamentSchema = new Schema(
     start_date: { type: String, default: null },
     end_date: { type: String, default: null },
     registration_date: { type: String, default: null },
+    roster_revision: { type: Number, default: 0 },
     registration_deadline: { type: Date, default: null },
     points_win: { type: Number, default: 2 },
     points_tie: { type: Number, default: 1 },
@@ -121,6 +122,7 @@ export const Tournament = mongoose.model('Tournament', tournamentSchema);
 
 const teamSchema = new Schema(
   {
+    source_club_id: { type: Schema.Types.ObjectId, ref: 'Club' },
     tournament_id: { type: Schema.Types.ObjectId, ref: 'Tournament', required: true },
     captain_id: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     name: { type: String, required: true },
@@ -135,10 +137,12 @@ const teamSchema = new Schema(
 
 teamSchema.index({ tournament_id: 1, name: 1 }, { unique: true });
 
+teamSchema.index({ tournament_id: 1, source_club_id: 1 }, { unique: true, partialFilterExpression: { source_club_id: { $type: 'objectId' } } });
 export const Team = mongoose.model('Team', teamSchema);
 
 const playerSchema = new Schema(
   {
+    source_member_id: { type: Schema.Types.ObjectId, ref: 'ClubMember' },
     team_id: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
     profile_id: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     full_name: { type: String, required: true },

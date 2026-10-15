@@ -123,7 +123,7 @@ export default function ScoringScreen() {
   useEffect(() => {
     if (!match || !profile || canOrganize) return;
     Alert.alert('Organizer only', 'Only the organizer or an assigned scorer can score this match.', [
-      { text: 'OK', onPress: () => router.replace(`/match/${matchId}`) },
+      { text: 'OK', onPress: () => router.back() },
     ]);
   }, [match, profile, canOrganize, matchId]);
 
@@ -241,7 +241,7 @@ export default function ScoringScreen() {
             {
               text: 'Start 2nd innings',
               onPress: () =>
-                router.replace({
+                router.push({
                   pathname: '/match/setup',
                   params: { matchId, innings: '2', target: String(next.target) },
                 }),
@@ -256,7 +256,7 @@ export default function ScoringScreen() {
         return;
       }
 
-      router.replace(`/match/${matchId}`);
+      router.push(`/match/${matchId}`);
     },
     [innings, matchId, endingInnings, syncPlayersToDb, finalizeMatchFlow]
   );
@@ -433,12 +433,12 @@ export default function ScoringScreen() {
         {canOrganize ? (
           <Pressable
             style={styles.setupBtn}
-            onPress={() => router.replace({ pathname: '/match/setup', params: { matchId } })}
+            onPress={() => router.push({ pathname: '/match/setup', params: { matchId } })}
           >
             <Text style={styles.setupBtnText}>Start match setup</Text>
           </Pressable>
         ) : (
-          <Pressable style={styles.setupBtn} onPress={() => router.replace(`/match/${matchId}`)}>
+          <Pressable style={styles.setupBtn} onPress={() => router.back()}>
             <Text style={styles.setupBtnText}>Back to match</Text>
           </Pressable>
         )}
@@ -457,7 +457,7 @@ export default function ScoringScreen() {
     <View style={styles.root}>
       <SafeAreaView style={styles.flex}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.replace(`/match/${matchId}`)}>
+          <Pressable onPress={() => router.back()}>
             <Ionicons name="chevron-down" size={28} color={colors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>Scoring</Text>
@@ -594,7 +594,7 @@ export default function ScoringScreen() {
         outcome={matchOutcome}
         onDone={() => {
           setMatchOutcome(null);
-          router.replace(`/match/${matchId}`);
+          router.back();
         }}
       />
 

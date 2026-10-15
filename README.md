@@ -162,3 +162,25 @@ Run `npm run typecheck`, `npm test`, and `npm run build --prefix server` before 
 ## License
 
 MIT
+
+## Settings and languages
+
+Profile → Settings includes profile/photo editing, English/Hindi/Gujarati language selection, light/dark appearance, reduced launch animation, push opt-in, scoring defaults, password change, revoking other sessions, account deletion and support reports. Language and appearance are device preferences; profile and scoring defaults are saved through the API. The catalog in `src/i18n/catalog.ts` provides Hindi and Gujarati translations with an English fallback for untranslated messages and user-entered content.
+
+Tournament management lists the signed-in organizer's tournaments (all tournaments for platform admins). It supports assigning existing accounts as scorers, approving teams, registration deadlines, configurable points, recent mutation history, JSON exports and archiving completed/cancelled tournaments. Scorers may set up innings and score/finalize matches; only organizers/admins may change tournament settings or delete matches. The audit view contains the latest 100 records starting with this release. Archived tournaments remain available to organizers and retain scorecards.
+
+Platform admins can suspend/restore non-admin accounts and resolve support reports. Password changes and session revocation invalidate older JWTs; existing sessions without a version remain valid until the first revocation. Account deletion requires the current password and is blocked while the user owns tournaments/teams or is an administrator.
+
+Deploy the updated `server/` API before distributing the app. No production accounts or tournament data are changed by the local validation tests. Push delivery still requires a configured EAS project and a native build; the notification preference controls registration and opt-out, not a scheduled campaign service. Individual device/session inventories and email invitation delivery are not implemented.
+
+
+## Reusable teams and player invitations
+
+- **My Teams → Reusable teams** creates a team independent of a tournament. Captains add guests or find registered players using the exact `KC-…` player ID shown on Profile. Account lookup exposes name/city/playing details, never email or phone. Email/phone search is intentionally unavailable until those contacts have a verification flow.
+- **Tournament → Add existing team** searches reusable teams and sends an in-app invitation to the captain. **Invitations → Review squad** preselects eligible members. Acceptance copies the chosen 2–30 players into a separate tournament squad. Pending player invitations are excluded; the server checks deadlines, capacity, duplicate entries and duplicate account participation.
+- Players accept or decline their own team invitations. A captain can link an existing guest record by inviting its owner using their KingCric ID. Acceptance links every snapshot of that roster member without changing delivery IDs or historical names. No names are auto-matched.
+- **Team → Reuse this team** lets the captain import a legacy tournament team into a reusable roster. Existing tournament/player IDs and scorecards remain intact. Future roster edits/removals do not propagate to earlier tournament squads.
+
+The API adds `Club`, `ClubMember`, `MemberInvitation`, and `ClubEntry` collections, plus optional source references on existing teams/players. **MongoDB transactions require a replica set or Atlas**; a standalone local MongoDB must be configured as a replica set before this flow is used. Deploy the server and let the new unique indexes initialize before distributing the app. No production migration or writes were run in this task.
+
+`npm test` covers invitation policy and squad snapshots. The standalone `tests/clubs.integration.ts` uses only a disposable replica set at `127.0.0.1:27029`, creates a uniquely named test database, and removes that database afterward. It checks consent, authorization, duplicate acceptance, copied squads, guest linking and preserved delivery IDs. Run it with `node --import ./server/node_modules/tsx/dist/loader.mjs tests/clubs.integration.ts` after starting that isolated replica set. Invitations appear in the app; this feature does not send email or SMS.

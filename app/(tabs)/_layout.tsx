@@ -9,6 +9,7 @@ export default function TabLayout() {
   const {t}=useTranslation();
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.orange,

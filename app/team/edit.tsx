@@ -22,6 +22,7 @@ import { useTeam } from '../../src/hooks/useTournaments';
 import { canManageTournament } from '../../src/lib/permissions';
 import type { Player, Tournament } from '../../src/types/database';
 import { useAuthStore } from '../../src/stores/authStore';
+import { squadLockMessage } from '../../src/lib/squadLock';
 
 export default function EditTeamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,17 +31,23 @@ export default function EditTeamScreen() {
   const { data: team, isLoading } = useTeam(id ?? '');
 
   const tournament = team?.tournament as Tournament | undefined;
+  const squadLocked = Boolean((team as { squad_locked?: boolean } | undefined)?.squad_locked);
+  const lockReason = (team as { squad_lock_reason?: 'status' | 'match' | null } | undefined)?.squad_lock_reason;
   const canEdit =
-    canManageTournament(tournament ?? null, profile) || team?.captain_id === profile?.id;
+    canManageTournament(tournament ?? null, profile) || (team?.captain_id === profile?.id && !squadLocked);
 
   useEffect(() => {
     if (isLoading || !team || !profile) return;
-    if (!canManageTournament(tournament ?? null, profile) && team.captain_id !== profile.id) {
-      Alert.alert('Not allowed', 'Only the tournament organizer or team captain can edit this squad.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+    if (!canEdit) {
+      Alert.alert(
+        'Not allowed',
+        squadLocked
+          ? squadLockMessage(lockReason, tournament?.status)
+          : 'Only the tournament organizer or team captain can edit this squad.',
+        [{ text: 'OK', onPress: () => router.back() }],
+      );
     }
-  }, [isLoading, team, profile, tournament]);
+  }, [isLoading, team, profile, tournament, canEdit, squadLocked, lockReason]);
 
   const [teamName, setTeamName] = useState('');
   const [shortName, setShortName] = useState('');
@@ -183,7 +190,7 @@ export default function EditTeamScreen() {
 
             <GradientButton title="Save Changes" onPress={handleSave} loading={saving} style={{ marginTop: 24 }} />
 
-          {canEdit && <Pressable disabled={saving} style={{padding:20,alignItems:'center',marginTop:18}} onPress={()=>Alert.alert('Delete team?', 'This deletes the team and its squad. Teams with matches must have those matches removed first.', [{text:'Keep team',style:'cancel'},{text:'Delete permanently',style:'destructive',onPress:async()=>{setSaving(true);const {error}=await apiSafe(`/teams/${id}`,{method:'DELETE'});setSaving(false);if(error){Alert.alert('Could not delete',error);return;}await queryClient.invalidateQueries();router.replace('/(tabs)/tournaments');}}])}><Text style={{color:colors.live,fontWeight:'700'}}>Delete team</Text></Pressable>}
+          {canManageTournament(tournament ?? null, profile) && <Pressable disabled={saving} style={{padding:20,alignItems:'center',marginTop:18}} onPress={()=>Alert.alert('Remove team?', 'Remove this team before a match goes live? Scheduled matches for this team will also be removed.', [{text:'Keep team',style:'cancel'},{text:'Remove team',style:'destructive',onPress:async()=>{setSaving(true);const {error}=await apiSafe(`/teams/${id}`,{method:'DELETE'});setSaving(false);if(error){Alert.alert('Could not remove team',error);return;}await queryClient.invalidateQueries();router.back();}}])}><Text style={{color:colors.live,fontWeight:'700'}}>Remove team</Text></Pressable>}
 </KeyboardForm>
       </SafeAreaView>
     </View>

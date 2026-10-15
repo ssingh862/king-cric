@@ -19,10 +19,11 @@ function profileFromUser(user: InstanceType<typeof User>) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, full_name } = req.body as {
+    const { email, password, full_name, avatar_url } = req.body as {
       email?: string;
       password?: string;
       full_name?: string;
+      avatar_url?: string | null;
     };
 
     if (!email?.trim() || !password) {
@@ -43,11 +44,20 @@ router.post('/register', async (req, res) => {
       return;
     }
 
+    let photo: string | null = null;
+    if (avatar_url) {
+      if (typeof avatar_url !== 'string' || avatar_url.length > 900000 || (!/^data:image\/(png|jpeg|webp);base64,/.test(avatar_url) && !/^https:\/\//.test(avatar_url))) {
+        res.status(400).json({ error: 'Invalid photo' });
+        return;
+      }
+      photo = avatar_url;
+    }
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({
       email: normalized,
       password: hash,
       full_name: full_name?.trim() || 'Cricket Fan',
+      avatar_url: photo,
     });
 
     const token = signToken(String(user._id), user.token_version ?? 0);

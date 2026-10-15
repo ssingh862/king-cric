@@ -89,8 +89,8 @@ export default function RegisterTeamScreen() {
     await queryClient.invalidateQueries({ queryKey: ['tournament-teams', tournamentId] });
 
     Alert.alert('Team registered!', `${teamName} and squad are saved.`, [
-      { text: 'Edit squad', onPress: () => router.replace(`/team/edit?id=${teamId}`) },
-      { text: 'View team', onPress: () => router.replace(`/team/${teamId}`) },
+      { text: 'Edit squad', onPress: () => router.push(`/team/edit?id=${teamId}`) },
+      { text: 'View team', onPress: () => router.push(`/team/${teamId}`) },
     ]);
   };
 

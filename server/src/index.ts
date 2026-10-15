@@ -7,6 +7,8 @@ import { Server } from 'socket.io';
 import { config } from './config';
 import { connectDb } from './db';
 import settingsRoutes from './routes/settings';
+import { Club, ClubMember, ClubEntry, MemberInvitation } from './models/clubs';
+import clubRoutes from './routes/clubs';
 import authRoutes from './routes/auth';
 import tournamentRoutes from './routes/tournaments';
 import teamRoutes from './routes/teams';
@@ -15,6 +17,7 @@ import { createMatchesRouter } from './routes/matches';
 
 async function main() {
   await connectDb();
+  await Promise.all([Club.init(), ClubMember.init(), ClubEntry.init(), MemberInvitation.init()]);
 
   const app = express();
   const server = http.createServer(app);
@@ -35,6 +38,7 @@ async function main() {
   });
 
   app.use('/auth', authRoutes);
+  app.use('/clubs', clubRoutes);
   app.use('/settings', settingsRoutes);
   app.use('/tournaments', tournamentRoutes);
   app.use('/teams', teamRoutes);

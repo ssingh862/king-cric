@@ -97,7 +97,7 @@ export default function CreateTournamentScreen() {
     await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
 
     Alert.alert('Created!', 'Your tournament is live — completely free.', [
-      { text: 'OK', onPress: () => router.replace(`/tournament/${tournamentId}`) },
+      { text: 'OK', onPress: () => router.push(`/tournament/${tournamentId}`) },
     ]);
   };
 

@@ -69,7 +69,7 @@ export async function tournamentRows(tournamentId: string) {
         const spell = bowl.get(bowler) ?? { balls: 0, runs: 0, wickets: 0 };
         if (event.is_legal_delivery) spell.balls += 1;
         if (!['bye', 'leg_bye'].includes(event.ball_type)) spell.runs += event.runs_off_bat + event.extras;
-        if (event.is_wicket && creditsBowler(event.wicket_type)) spell.wickets += 1;
+        if (event.is_wicket && creditsBowler(event.wicket_type ?? null)) spell.wickets += 1;
         bowl.set(bowler, spell);
       }
     }

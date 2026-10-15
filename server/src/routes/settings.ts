@@ -1,3 +1,4 @@
+import { Club } from '../models/clubs';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { requireAuth, type AuthRequest } from '../middleware/auth';
@@ -43,7 +44,7 @@ router.post('/revoke-sessions', route(async (req, res) => {
 router.post('/delete-account', route(async (req, res) => {
   const user = await User.findById(req.userId).select('+password');
   if (!user || typeof req.body.password !== 'string' || !await bcrypt.compare(req.body.password,user.password)) return res.status(400).json({error:'Current password is incorrect'});
-  if (user.role === 'admin' || await Tournament.exists({organizer_id:req.userId}) || await Team.exists({captain_id:req.userId})) return res.status(409).json({error:'Transfer or remove your tournaments and teams before deleting your account. Admin accounts need another administrator.'});
+  if (await Club.exists({owner_id:req.userId}) || user.role === 'admin' || await Tournament.exists({organizer_id:req.userId}) || await Team.exists({captain_id:req.userId})) return res.status(409).json({error:'Transfer or remove your tournaments and teams before deleting your account. Admin accounts need another administrator.'});
   await User.findByIdAndDelete(req.userId); res.json({ok:true});
 }));
 router.post('/reports', route(async(req,res) => {

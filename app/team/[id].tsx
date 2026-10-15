@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import { apiSafe, isApiConfigured } from '../../src/lib/api';
 import { colors } from '../../src/lib/theme';
 import type { Player, Tournament } from '../../src/types/database';
 import { useAuthStore } from '../../src/stores/authStore';
+import { squadLockMessage } from '../../src/lib/squadLock';
 
 async function pickPlayerPhoto(playerId: string, refetch: () => Promise<unknown>) {
   const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.4, base64: true });
@@ -26,9 +28,14 @@ export default function TeamScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { data: team, isLoading, refetch } = useTeam(id ?? '');
 
+  const [reuseError,setReuseError]=useState('');
+  const [reusing,setReusing]=useState(false);
+  async function reuse(){setReusing(true);try{const {data,error}=await apiSafe<{id:string}>(`/clubs/import/${id}`,{method:'POST'});if(error)setReuseError(error);else if(data)router.push(`/clubs/${data.id}` as never);}finally{setReusing(false);}}
   const tournament = team?.tournament as Tournament | undefined;
+  const squadLocked = Boolean((team as { squad_locked?: boolean } | undefined)?.squad_locked);
+  const lockReason = (team as { squad_lock_reason?: 'status' | 'match' | null } | undefined)?.squad_lock_reason;
   const canEditSquad =
-    canManageTournament(tournament ?? null, profile) || team?.captain_id === profile?.id;
+    canManageTournament(tournament ?? null, profile) || (team?.captain_id === profile?.id && !squadLocked);
 
   const players = (team?.players as Player[] | undefined) ?? [];
 
@@ -69,6 +76,8 @@ export default function TeamScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll}>
+          {team?.captain_id===profile?.id?<GradientButton title="Reuse this team" loading={reusing} onPress={()=>void reuse()} style={{marginBottom:16}}/>:null}
+          {reuseError?<Text accessibilityRole="alert">{reuseError}</Text>:null}
           <View style={styles.teamHeader}>
             <View style={[styles.logo, { backgroundColor: t.primary_color ?? colors.orange }]}>
               <Text style={styles.logoText}>{t.short_name ?? t.name?.slice(0, 3)}</Text>
@@ -79,9 +88,14 @@ export default function TeamScreen() {
 
           <Text style={styles.section}>Squad ({players.length})</Text>
           {canEditSquad ? <Text style={styles.empty}>Tap a player for stats. Hold a player to add a photo. Jersey numbers show when there is no photo.</Text> : null}
+          {squadLocked && team?.captain_id === profile?.id && !canManageTournament(tournament ?? null, profile) ? (
+            <GlassCard style={{ marginBottom: 12 }}>
+              <Text style={styles.empty}>{squadLockMessage(lockReason, tournament?.status)}</Text>
+            </GlassCard>
+          ) : null}
           {players.length === 0 ? (
             <GlassCard>
-              <Text style={styles.empty}>No players yet. Tap Edit to add your squad.</Text>
+              <Text style={styles.empty}>{canEditSquad ? 'No players yet. Tap Edit to add your squad.' : 'No players yet.'}</Text>
             </GlassCard>
           ) : (
             players.map((p) => (
@@ -103,18 +117,20 @@ export default function TeamScreen() {
                       </Text>
                       <Text style={styles.playerRole}>{p.role?.replace(/_/g, ' ')}</Text>
                     </View>
-                    <Ionicons name="pencil" size={16} color={colors.textDim} />
+                    {canEditSquad ? <Ionicons name="pencil" size={16} color={colors.textDim} /> : null}
                   </View>
                 </GlassCard>
               </Pressable>
             ))
           )}
 
-          <GradientButton
-            title="Edit team & players"
-            onPress={() => router.push({ pathname: '/team/edit', params: { id: id ?? '' } })}
-            style={{ marginTop: 20 }}
-          />
+          {canEditSquad ? (
+            <GradientButton
+              title="Edit team & players"
+              onPress={() => router.push({ pathname: '/team/edit', params: { id: id ?? '' } })}
+              style={{ marginTop: 20 }}
+            />
+          ) : null}
           <GradientButton
             title="Refresh"
             onPress={() => refetch()}

@@ -8,7 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardForm } from '../../src/components/ui/KeyboardForm';
 import { GradientButton } from '../../src/components/ui/GradientButton';
@@ -103,7 +103,7 @@ export default function CreateMatchScreen() {
     }
     await queryClient.invalidateQueries({ queryKey: ['tournament-matches', tournamentId] });
     await queryClient.invalidateQueries({ queryKey: ['matches'] });
-    router.replace({ pathname: '/match/setup', params: { matchId: matchId ?? '' } });
+    router.push({ pathname: '/match/setup', params: { matchId: matchId ?? '' } });
   };
 
   if (isLoading && !tournament) {
@@ -133,8 +133,7 @@ export default function CreateMatchScreen() {
           <View style={{ width: 28 }} />
         </View>
 
-        <KeyboardForm>
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <KeyboardForm contentContainerStyle={styles.scroll}>
             <Text style={styles.hint}>
               Choose two different teams. You will pick who bats first on the next screen.
             </Text>
@@ -230,7 +229,6 @@ export default function CreateMatchScreen() {
               style={{ marginTop: 24 }}
               disabled={loading || !teamAId || !teamBId || teamAId === teamBId}
             />
-          </ScrollView>
         </KeyboardForm>
       </SafeAreaView>
     </View>
