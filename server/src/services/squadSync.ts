@@ -77,7 +77,8 @@ export async function syncMemberToOpenSquads(memberId: unknown, session: ClientS
             if (await Player.exists({ team_id: { $in: others }, profile_id: fields.profile_id }).session(session))
                 throw new ClubError('A selected player is already in another squad in this tournament');
         }
-        const taken = (await Player.find({ team_id: team._id }).session(session).distinct('jersey_number')).filter((n): n is number => typeof n === 'number');
+        const squad = await Player.find({ team_id: team._id }).select('jersey_number').session(session);
+        const taken = squad.map((player) => player.jersey_number).filter((n): n is number => typeof n === 'number');
         let jersey = 1;
         while (taken.includes(jersey))
             jersey += 1;

@@ -1,12 +1,12 @@
 import { createThemedStyles } from '../../lib/theme';
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, type ReactElement, useEffect, useRef } from 'react';
 import {
   findNodeHandle,
   Keyboard,
   Platform,
   ScrollView,
   TextInput,
-  type ReactElement,
+  type RefreshControlProps,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface KeyboardFormProps {
   children: ReactNode;
   contentContainerStyle?: ViewStyle;
-  refreshControl?: ReactElement;
+  refreshControl?: ReactElement<RefreshControlProps>;
 }
 
 type KeyboardScroller = {
