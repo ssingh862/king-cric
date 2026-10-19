@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { AppState } from 'react-native';
 import { mapAuthError } from '../lib/authErrors';
-import { api, getToken, isApiConfigured, setToken } from '../lib/api';
+import { ApiError, api, getToken, isApiConfigured, setToken } from '../lib/api';
 import type { Profile } from '../types/database';
 
 interface AuthResponse {
@@ -41,7 +42,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initAuthListener: () => {
     void get().loadProfile();
-    return () => {};
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && !get().isAuthenticated && !get().isLoading) void get().loadProfile();
+    });
+    return () => subscription.remove();
   },
 
   signInWithEmail: async (email, password) => {
@@ -135,14 +139,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (!await getToken()) { set({ isAuthenticated: false, isLoading: false, profile: null, userEmail: null }); return; }
-      const data = await api<MeResponse>('/auth/me', { signal: AbortSignal.timeout(8000) });
+      const data = await api<MeResponse>('/auth/me', { signal: AbortSignal.timeout(60000) });
       set({
         profile: data.user,
         userEmail: data.email,
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch {
+    } catch (error) {
+      // A timeout, offline device or server outage must not destroy a valid session.
+      if (!(error instanceof ApiError) || (error.status !== 401 && error.status !== 403)) {
+        set({ isLoading: false });
+        return;
+      }
       await setToken(null);
       set({
         profile: null,

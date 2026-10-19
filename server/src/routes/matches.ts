@@ -49,10 +49,12 @@ export function createMatchesRouter(io: Server) {
 
   async function enrichMatch(match: InstanceType<typeof Match>) {
     const m = match.toObject();
-    const teamA = await teamSummary(match.team_a_id);
-    const teamB = await teamSummary(match.team_b_id);
-    const tournament = await tournamentSummary(match.tournament_id);
-    return { ...mapMatchDoc(m, teamA, teamB, tournament), innings: (await Innings.find({ match_id: match._id }).sort({ innings_number: 1 })).map(i => mapInningsDoc(i.toObject())) };
+    const [teamA, teamB, tournament, innings] = await Promise.all([
+      teamSummary(match.team_a_id), teamSummary(match.team_b_id),
+      tournamentSummary(match.tournament_id),
+      Innings.find({ match_id: match._id }).sort({ innings_number: 1 }),
+    ]);
+    return { ...mapMatchDoc(m, teamA, teamB, tournament), innings: innings.map(i => mapInningsDoc(i.toObject())) };
   }
 
   router.get('/upcoming', async (req, res) => {
@@ -94,7 +96,7 @@ export function createMatchesRouter(io: Server) {
     res.json(players.map((p) => toApi(p)));
   });
 
-  router.patch('/innings/:inningsId', requireAuth, async (req, res) => {
+  router.patch('/innings/:inningsId', async (req, res) => {
     const inn = await Innings.findById(req.params.inningsId);
     if (!inn) {
       res.status(404).json({ error: 'Innings not found' });
@@ -126,7 +128,7 @@ export function createMatchesRouter(io: Server) {
     res.json(events.map((e) => mapScoreEventDoc(e.toObject())));
   });
 
-  router.post('/innings/:inningsId/score-events', requireAuth, async (req: AuthRequest, res) => {
+  router.post('/innings/:inningsId/score-events', async (req: AuthRequest, res) => {
     const inn = await Innings.findById(req.params.inningsId);
     if (!inn) {
       res.status(404).json({ error: 'Innings not found' });
@@ -148,8 +150,10 @@ export function createMatchesRouter(io: Server) {
     try { ball = validateBall(req.body, rules, freeHit); }
     catch (e) { res.status(400).json({ error: (e as Error).message }); return; }
     const ids = [req.body.striker_player_id, req.body.non_striker_player_id].filter(Boolean);
-    const batters = await Player.countDocuments({ _id: { $in: ids }, team_id: inn.batting_team_id });
-    const bowler = await Player.findOne({ _id: req.body.bowler_player_id, team_id: inn.bowling_team_id });
+    const [batters, bowler] = await Promise.all([
+      Player.countDocuments({ _id: { $in: ids }, team_id: inn.batting_team_id }),
+      Player.findOne({ _id: req.body.bowler_player_id, team_id: inn.bowling_team_id }),
+    ]);
     if (!req.body.striker_player_id || !bowler || batters !== ids.length || new Set(ids).size !== ids.length || (!rules.lastBatterStands && ids.length !== 2)) {
       res.status(400).json({ error: 'Choose distinct batters and a bowler from the correct teams' }); return;
     }
@@ -171,8 +175,7 @@ export function createMatchesRouter(io: Server) {
       commentary: typeof req.body.commentary === 'string' ? req.body.commentary.slice(0, 200) : null,
     });
 
-    await syncInningsFromEvents(String(inn._id));
-    const updatedInnings = await Innings.findById(inn._id);
+    const updatedInnings = await syncInningsFromEvents(String(inn._id));
     const mappedEvent = mapScoreEventDoc(event.toObject());
     const mappedInnings = updatedInnings ? mapInningsDoc(updatedInnings.toObject()) : null;
 
@@ -181,10 +184,10 @@ export function createMatchesRouter(io: Server) {
       io.to(`innings:${inn._id}`).emit('innings_updated', mappedInnings);
     }
 
-    res.status(201).json(mappedEvent);
+    res.status(201).json({ ...mappedEvent, innings: mappedInnings });
   });
 
-  router.delete('/score-events/:eventId', requireAuth, async (req, res) => {
+  router.delete('/score-events/:eventId', async (req, res) => {
     const event = await ScoreEvent.findById(req.params.eventId);
     if (!event) {
       res.status(404).json({ error: 'Score event not found' });
@@ -209,7 +212,7 @@ export function createMatchesRouter(io: Server) {
     res.status(204).send();
   });
 
-  router.patch('/score-events/:eventId', requireAuth, async (req, res) => {
+  router.patch('/score-events/:eventId', async (req, res) => {
     const event = await ScoreEvent.findById(req.params.eventId);
     if (!event) { res.status(404).json({ error: 'Delivery not found' }); return; }
     const last = await ScoreEvent.findOne({ innings_id: event.innings_id }).sort({ created_at: -1, _id: -1 });
@@ -240,7 +243,7 @@ export function createMatchesRouter(io: Server) {
     res.json(await enrichMatch(match));
   });
 
-  router.post('/', requireAuth, async (req, res) => {
+  router.post('/', async (req, res) => {
     const { tournament_id, team_a_id, team_b_id, venue, scheduled_at, overs_per_innings } = req.body;
 
     if (!tournament_id || !team_a_id || !team_b_id) {
@@ -269,7 +272,7 @@ export function createMatchesRouter(io: Server) {
     res.status(201).json({ id: String(match._id) });
   });
 
-  router.patch('/:id', requireAuth, async (req, res) => {
+  router.patch('/:id', async (req, res) => {
     const match = await Match.findById(req.params.id);
     if (!match) {
       res.status(404).json({ error: 'Match not found' });
@@ -304,7 +307,7 @@ export function createMatchesRouter(io: Server) {
     res.json(await enrichMatch(match));
   });
 
-  router.delete('/:id', requireAuth, async (req, res) => {
+  router.delete('/:id', async (req, res) => {
     const match = await Match.findById(req.params.id);
     if (!match) {
       res.status(404).json({ error: 'Match not found' });
@@ -371,7 +374,7 @@ export function createMatchesRouter(io: Server) {
     res.json(mapInningsDoc(inn.toObject()));
   });
 
-  router.post('/:id/innings', requireAuth, async (req: AuthRequest, res) => {
+  router.post('/:id/innings', async (req: AuthRequest, res) => {
     const {
       batting_team_id,
       bowling_team_id,
@@ -412,7 +415,7 @@ export function createMatchesRouter(io: Server) {
     res.status(201).json(mapInningsDoc(inn.toObject()));
   });
 
-  router.post('/:id/finalize', requireAuth, async (req, res) => {
+  router.post('/:id/finalize', async (req, res) => {
     const match = await Match.findById(req.params.id);
     if (!match) {
       res.status(404).json({ error: 'Match not found' });

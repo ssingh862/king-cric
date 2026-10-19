@@ -5,9 +5,12 @@ import { recalculateTournamentPoints } from './pointsTable';
 export async function syncInningsFromEvents(inningsId: string) {
   const inn = await Innings.findById(inningsId);
   if (!inn) return;
-  const match = await Match.findById(inn.match_id);
+  const [match, events, squad] = await Promise.all([
+    Match.findById(inn.match_id),
+    ScoreEvent.find({ innings_id: inningsId }).sort({ created_at: 1, _id: 1 }),
+    Player.countDocuments({ team_id: inn.batting_team_id }),
+  ]);
   const rules = validateRules(match?.rules);
-  const events = await ScoreEvent.find({ innings_id: inningsId }).sort({ created_at: 1, _id: 1 });
   let runs = 0, wickets = 0, legalBalls = 0;
   let wides = 0, noBalls = 0, byes = 0, legByes = 0;
   for (const e of events) {
@@ -19,7 +22,6 @@ export async function syncInningsFromEvents(inningsId: string) {
     if (e.ball_type === 'bye') byes += e.extras + e.runs_off_bat;
     if (e.ball_type === 'leg_bye') legByes += e.extras + e.runs_off_bat;
   }
-  const squad = await Player.countDocuments({ team_id: inn.batting_team_id });
   const maxWickets = Math.max(1, squad - (rules.lastBatterStands ? 0 : 1));
   inn.total_runs = runs; inn.total_wickets = wickets;
   inn.total_overs = Math.floor(legalBalls / 6) + (legalBalls % 6) / 10;
@@ -47,6 +49,8 @@ export async function syncInningsFromEvents(inningsId: string) {
       { _id: inn._id, current_bowler_id: finishedBowler },
       { $set: { current_bowler_id: null } }
     );
+    // Return the persisted bowler state without a second innings read.
+    if (String(inn.current_bowler_id) === String(finishedBowler)) inn.current_bowler_id = null;
   }
   // A correction invalidates a previously published result until it is finalized again.
   if (match?.status === 'completed') {
@@ -55,4 +59,5 @@ export async function syncInningsFromEvents(inningsId: string) {
     await match.save();
     await recalculateTournamentPoints(String(match.tournament_id));
   }
+  return inn;
 }

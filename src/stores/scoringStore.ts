@@ -34,6 +34,7 @@ let activeInningsId: string | null = null;
 let realtimeRefCount = 0;
 let scoreEventHandler: ((payload: { type: string; data: ScoreEvent }) => void) | null = null;
 let inningsUpdateHandler: ((inn: Innings) => void) | null = null;
+let reconnectHandler: (() => void) | null = null;
 
 function teardownRealtime() {
   if (activeInningsId) {
@@ -41,9 +42,11 @@ function teardownRealtime() {
     const socket = getSocket();
     if (socket && scoreEventHandler) socket.off('score_event', scoreEventHandler);
     if (socket && inningsUpdateHandler) socket.off('innings_updated', inningsUpdateHandler);
+    if (socket && reconnectHandler) socket.off('connect', reconnectHandler);
     activeInningsId = null;
     scoreEventHandler = null;
     inningsUpdateHandler = null;
+    reconnectHandler = null;
   }
   realtimeRefCount = 0;
 }
@@ -209,7 +212,10 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
 
   loadEvents: async (inningsId) => {
     if (!isApiConfigured()) return;
+    const before = get().events;
     const data = await api<ScoreEvent[]>(`/matches/innings/${inningsId}/score-events`);
+    // A newer delivery/undo or navigation must win over an older HTTP snapshot.
+    if (get().innings?.id !== inningsId || get().events !== before) return;
     const events = dedupeScoreEvents(data ?? []);
     const { innings, matchRules, bowlerId } = get();
     set({ events, ...applyCreaseFromEvents(innings, events, matchRules, bowlerId) });
@@ -272,6 +278,8 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
 
     socket.on('score_event', scoreEventHandler);
     socket.on('innings_updated', inningsUpdateHandler);
+    reconnectHandler = () => { void get().loadEvents(inningsId).catch(() => {}); };
+    socket.on('connect', reconnectHandler);
     joinInningsRoom(inningsId);
 
     return () => {
@@ -405,7 +413,7 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       return followUpAfterBall(isWicket, endOfOver, snap, matchRules, crease);
     }
 
-    const { data, error } = await apiSafe<ScoreEvent>(
+    const { data, error } = await apiSafe<ScoreEvent & { innings?: Innings }>(
       `/matches/innings/${innings.id}/score-events`,
       {
         method: 'POST',
@@ -427,13 +435,17 @@ export const useScoringStore = create<ScoringState>((set, get) => ({
       nonStrikerId: crease.nonStrikerId,
       bowlerId: endOfOver ? null : bowlerId,
       freeHitActive: snap.freeHitNext,
-      innings: endOfOver && innings.current_bowler_id === bowlerId
-        ? { ...innings, current_bowler_id: null, striker_player_id: crease.strikerId, non_striker_player_id: crease.nonStrikerId }
-        : innings,
+      innings: data?.innings ?? {
+        ...innings,
+        total_runs: snap.totalRuns, total_wickets: snap.totalWickets,
+        total_overs: Math.floor(snap.legalBalls / matchRules.ballsPerOver) + (snap.legalBalls % matchRules.ballsPerOver) / 10,
+        status: snap.isInningsComplete ? 'completed' : 'in_progress',
+        current_bowler_id: endOfOver ? null : bowlerId,
+        striker_player_id: crease.strikerId, non_striker_player_id: crease.nonStrikerId,
+      },
     });
 
-    await get().syncPlayersToDb();
-
+    // The score endpoint persists the crease and totals before acknowledging the ball.
     return followUpAfterBall(isWicket, endOfOver, snap, matchRules, crease);
   },
 }));
