@@ -126,6 +126,47 @@ router.get('/tournaments/:id/export', route(async(req,res) => {
 router.use('/admin', route(async(req,res) => {
   const user=await User.findById(req.userId);
   if(user?.role!=='admin') return res.status(403).json({error:'Administrator access required'});
+  // Paged lists keep the admin workspace usable as the community grows.
+  const page=Math.max(1,Math.min(10000,Math.floor(Number(req.query.page)||1)));
+  const limit=20;
+  const q=String(req.query.q??'').trim().slice(0,80);
+  const escaped=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  if(req.method==='GET' && req.path==='/overview') {
+    const [users,suspended,tournaments,liveMatches,teams,openReports]=await Promise.all([User.countDocuments(),User.countDocuments({suspended:true}),Tournament.countDocuments(),Match.countDocuments({status:'live'}),Team.countDocuments(),SupportReport.countDocuments({status:'open'})]);
+    return res.json({users,suspended,tournaments,liveMatches,teams,openReports});
+  }
+  if(req.method==='GET' && req.path==='/users-list') {
+    const filter:Record<string,unknown>={};
+    if(q)filter.$or=[{full_name:{$regex:escaped,$options:'i'}},{email:{$regex:escaped,$options:'i'}}];
+    if(req.query.status==='suspended')filter.suspended=true;
+    else if(req.query.status==='active')filter.suspended={$ne:true};
+    const [items,total]=await Promise.all([User.find(filter).select('full_name email role suspended').sort({_id:-1}).skip((page-1)*limit).limit(limit),User.countDocuments(filter)]);
+    return res.json({items:items.map(toApi),total,page,limit});
+  }
+  if(req.method==='GET' && req.path==='/tournaments') {
+    const filter:Record<string,unknown>={};
+    if(q)filter.$or=[{name:{$regex:escaped,$options:'i'}},{city:{$regex:escaped,$options:'i'}}];
+    if(['draft','registration','ongoing','completed','cancelled'].includes(String(req.query.status)))filter.status=req.query.status;
+    const [items,total]=await Promise.all([Tournament.find(filter).sort({created_at:-1}).skip((page-1)*limit).limit(limit).populate('organizer_id','full_name'),Tournament.countDocuments(filter)]);
+    return res.json({items:items.map(toApi),total,page,limit});
+  }
+  if(req.method==='GET' && req.path==='/reports-list') {
+    const filter:Record<string,unknown>={};
+    if(['open','resolved'].includes(String(req.query.status)))filter.status=req.query.status;
+    const [items,total]=await Promise.all([SupportReport.find(filter).sort({createdAt:-1}).skip((page-1)*limit).limit(limit).populate('user_id','full_name email'),SupportReport.countDocuments(filter)]);
+    return res.json({items:items.map(toApi),total,page,limit});
+  }
+  if(req.method==='GET' && req.path==='/activity') {
+    const [items,total]=await Promise.all([AuditLog.find().sort({created_at:-1}).skip((page-1)*limit).limit(limit).populate('actor_id','full_name'),AuditLog.countDocuments()]);
+    return res.json({items:items.map(toApi),total,page,limit});
+  }
+  if(req.method==='POST' && req.path==='/report-status') {
+    if(!['open','resolved'].includes(req.body.status)||!String(req.body.id??'').match(/^[a-f0-9]{24}$/i))return res.status(400).json({error:'Invalid report update'});
+    const report=await SupportReport.findByIdAndUpdate(req.body.id,{status:req.body.status},{new:true});
+    if(!report)return res.status(404).json({error:'Report not found'});
+    await AuditLog.create({actor_id:req.userId,action:report.status==='resolved'?'Report resolved':'Report reopened',resource:String(report._id)});
+    return res.json({ok:true});
+  }
   if(req.method==='GET' && req.path==='/users') return res.json((await User.find().select('full_name email role suspended').limit(200)).map(toApi));
   if(req.method==='GET' && req.path==='/reports') return res.json((await SupportReport.find().sort({createdAt:-1}).limit(100)).map(toApi));
   if(req.method==='POST' && req.path==='/suspend') {

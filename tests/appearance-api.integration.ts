@@ -1,3 +1,4 @@
+import { brandPalettes } from '../src/lib/brandPalettes';
 /** Disposable local DB only. Verify global branding authorization, validation and persistence. */
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -16,15 +17,16 @@ async function main(){
   const [admin,user]=await User.create([{email:'admin@example.invalid',password:'unused',full_name:'Admin',role:'admin'},{email:'user@example.invalid',password:'unused',full_name:'User',role:'player'}]);
   async function request(method='GET',body?:unknown,actor?:typeof admin){const r=await fetch(base,{method,headers:{'Content-Type':'application/json',...(actor?{Authorization:`Bearer ${signToken(String(actor._id),actor.token_version??0)}`}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,body:await r.json()};}
   assert.deepEqual((await request()).body,{palette:'green'});
+  const options=await fetch(base+'/palettes').then(r=>r.json());assert.deepEqual(options.palettes,Object.keys(brandPalettes));
   assert.equal((await request('PUT',{palette:'pink'})).status,401);
   assert.equal((await request('PUT',{palette:'pink'},user)).status,403);
   assert.equal((await request('PUT',{palette:'not-a-color'},admin)).status,400);
   assert.equal((await request('PUT',{palette:{$ne:'green'}},admin)).status,400);
   assert.deepEqual((await request()).body,{palette:'green'});
-  for(const palette of ['pink','blue','amber','green']){assert.deepEqual(await request('PUT',{palette},admin),{status:200,body:{palette}});assert.deepEqual((await request()).body,{palette});}
-  assert.equal(emitted.length,4);assert.deepEqual(emitted[0],['appearance_updated',{palette:'pink'}]);
-  assert.equal(await AuditLog.countDocuments({actor_id:admin._id,action:'Brand color updated'}),4);
-  console.log('Appearance integration passed: default, anonymous denial, player denial, invalid values, four palettes, persistence, live events and audit.');
+  for(const palette of Object.keys(brandPalettes)){assert.deepEqual(await request('PUT',{palette},admin),{status:200,body:{palette}});assert.deepEqual((await request()).body,{palette});}
+  assert.equal(emitted.length,12);assert.deepEqual(emitted[0],['appearance_updated',{palette:'green'}]);
+  assert.equal(await AuditLog.countDocuments({actor_id:admin._id,action:'Brand color updated'}),12);
+  console.log('Appearance integration passed: default, anonymous denial, player denial, invalid values, twelve palettes, persistence, live events and audit.');
  }finally{await new Promise<void>(resolve=>server.close(()=>resolve()));await mongoose.connection.dropDatabase();await mongoose.disconnect();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

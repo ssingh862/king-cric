@@ -3,10 +3,11 @@ import { Schema, model } from 'mongoose';
 import type { Server } from 'socket.io';
 import { User, AuditLog } from '../models';
 import { requireAuth, type AuthRequest } from '../middleware/auth';
-const palettes=['green','pink','blue','amber'];
+const palettes=['green','pink','blue','amber','teal','violet','coral','navygold','mint','burgundy','indigo','slate'];
 const Appearance=model('Appearance',new Schema({_id:{type:String,default:'global'},palette:{type:String,enum:palettes,default:'green'},updated_by:{type:Schema.Types.ObjectId,ref:'User'}},{timestamps:true}));
 export function createAppearanceRouter(io:Server){
  const router=Router();
+ router.get('/palettes',(_req,res)=>res.json({palettes}));
  router.get('/',async(_req,res)=>{try{const saved=await Appearance.findById('global');res.json({palette:saved?.palette??'green'});}catch{res.status(503).json({error:'Appearance is temporarily unavailable'});}});
  router.put('/',requireAuth,async(req:AuthRequest,res)=>{
   try{
