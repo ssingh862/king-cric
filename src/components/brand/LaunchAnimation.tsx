@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { usePreferences } from '../../stores/preferencesStore';
 import { Text } from '../../i18n';
@@ -18,6 +19,7 @@ import { colors } from '../../lib/theme';
 const GREEN = '#058C66';
 
 export function LaunchAnimation({ ready, onFinish }: { ready: boolean; onFinish: () => void }) {
+ useBranding(s=>s.palette);
   const progress = useSharedValue(0);
   const systemReduceMotion = useReducedMotion();
   const reduceMotion = usePreferences(s=>s.reduceMotion) || systemReduceMotion;

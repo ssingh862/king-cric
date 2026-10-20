@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { StyleSheet,  View } from 'react-native';
@@ -10,6 +11,7 @@ interface PartnershipPanelProps {
 }
 
 export function PartnershipPanel({ partnership, playerNames }: PartnershipPanelProps) {
+ useBranding(s=>s.palette);
   if (!partnership || partnership.balls === 0) return null;
 
   const name = (id: string) => playerNames.get(id) ?? 'Batter';

@@ -1,3 +1,6 @@
+import { ScreenHeader } from '../../src/components/ui/ScreenHeader';
+import { StatusBadge } from '../../src/components/ui/StatusBadge';
+import { useBranding } from '../../src/stores/brandingStore';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +18,7 @@ import { ballTypeLabel, formatTournamentDate } from '../../src/lib/tournaments';
 import { colors } from '../../src/lib/theme';
 
 export default function TournamentsScreen() {
+ useBranding(s=>s.palette);
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useTournaments();
   const list = isApiConfigured() ? data : MOCK_TOURNAMENTS;
@@ -29,14 +33,7 @@ export default function TournamentsScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.flex}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Tournaments</Text>
-          <Pressable style={styles.addBtn} onPress={() => router.push('/tournament/create')}>
-            <LinearGradient colors={[colors.orange, colors.pink]} style={styles.addGrad}>
-              <Ionicons name="add" size={24} color="#fff" />
-            </LinearGradient>
-          </Pressable>
-        </View>
+        <ScreenHeader title="Tournaments" subtitle="Find your next league" action={<Pressable accessibilityRole="button" accessibilityLabel="Create tournament" onPress={()=>router.push('/tournament/create')} style={{height:46,width:46,backgroundColor:colors.forest,borderRadius:14,alignItems:'center',justifyContent:'center'}}><Ionicons name="add" size={24} color={colors.lime}/></Pressable>}/>
         <ScrollView contentContainerStyle={styles.scroll}>
           {isLoading ? (
             <ActivityIndicator color={colors.orange} />
@@ -70,9 +67,7 @@ export default function TournamentsScreen() {
                   </View>
                   <View style={styles.footer}>
                     <Text style={styles.venue}>{t.venue ?? 'Venue TBD'}</Text>
-                    <Text style={[styles.badge, t.status === 'registration' && styles.badgeOpen]}>
-                      {t.status}
-                    </Text>
+                    <StatusBadge status={t.status}/>
                   </View>
                 </GlassCard>
               </Pressable>

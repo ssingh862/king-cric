@@ -1,7 +1,9 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { usePreferences } from '../../stores/preferencesStore';
 import { colors, radius, shadows } from '../../lib/theme';
 
 interface GlassCardProps {
@@ -12,9 +14,11 @@ interface GlassCardProps {
 }
 
 export function GlassCard({ children, style, delay = 0, elevated = true }: GlassCardProps) {
+ useBranding(s=>s.palette);
+  const reduceMotion = usePreferences(s=>s.reduceMotion);
   return (
     <Animated.View
-      entering={FadeInDown.delay(delay).springify().damping(18)}
+      entering={reduceMotion ? undefined : FadeInDown.delay(delay).duration(180)}
       style={[styles.wrapper, elevated && shadows.card, style]}
     >
       <View style={styles.inner}>{children}</View>
@@ -32,6 +36,6 @@ const styles = createThemedStyles({
   },
   inner: {
     backgroundColor: colors.card,
-    padding: 16,
+    padding: 18,
   },
 });

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { ReactNode, type ReactElement, useEffect, useRef } from 'react';
 import {
@@ -44,6 +45,7 @@ function scrollFocusedField(scroll: ScrollView | null) {
 
 /** Scrollable form that keeps the focused field above the keyboard. */
 export function KeyboardForm({ children, contentContainerStyle, refreshControl }: KeyboardFormProps) {
+ useBranding(s=>s.palette);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const bindScroll = (node: ScrollView | null) => {

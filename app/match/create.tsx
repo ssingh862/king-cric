@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert, TextInput } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -26,6 +27,7 @@ type TeamOption = {
 };
 
 export default function CreateMatchScreen() {
+ useBranding(s=>s.palette);
   const queryClient = useQueryClient();
   const { tournamentId } = useLocalSearchParams<{ tournamentId: string }>();
   const profile = useAuthStore((s) => s.profile);
@@ -236,6 +238,7 @@ export default function CreateMatchScreen() {
 }
 
 function TeamBadge({ team }: { team: TeamOption }) {
+ useBranding(s=>s.palette);
   return (
     <View style={styles.badgeCol}>
       <View style={[styles.badgeDot, { backgroundColor: team.primary_color ?? colors.orange }]}>
@@ -263,6 +266,7 @@ function TeamCard({
   disabledReason?: string;
   onPress: () => void;
 }) {
+ useBranding(s=>s.palette);
   return (
     <Pressable
       style={[

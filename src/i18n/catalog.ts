@@ -343,3 +343,42 @@ export function translate(text: string, language: Language): string {
   const key=text.trim(); const entry=messages[key];
   return entry ? text.replace(key,entry[language==='hi'?0:1]) : text;
 }
+
+Object.assign(messages, {
+ 'Brand appearance':['ब्रांड का रूप','બ્રાન્ડનો દેખાવ'],
+ 'Green':['हरा','લીલો'],'Pink':['गुलाबी','ગુલાબી'],'Blue':['नीला','વાદળી'],'Amber':['अंबर','અંબર'],
+ 'Choose the color identity for everyone. Preview it here, then apply it to the website and mobile app.':['सबके लिए ब्रांड का रंग चुनें। यहां देखें, फिर वेबसाइट और मोबाइल ऐप पर लागू करें।','સૌ માટે બ્રાન્ડનો રંગ પસંદ કરો. અહીં જુઓ, પછી વેબસાઇટ અને મોબાઇલ એપ પર લાગુ કરો.'],
+ 'Brand colors updated for the website and app.':['वेबसाइट और ऐप के ब्रांड रंग अपडेट हो गए।','વેબસાઇટ અને એપના બ્રાન્ડ રંગો અપડેટ થયા.'],
+ 'Apply brand color':['ब्रांड का रंग लागू करें','બ્રાન્ડનો રંગ લાગુ કરો'],
+ 'Apply current theme':['वर्तमान थीम लागू करें','હાલની થીમ લાગુ કરો'],
+ 'Your teams. Your tournaments.':['आपकी टीमें। आपके टूर्नामेंट।','તમારી ટીમો. તમારી ટુર્નામેન્ટ.'],
+ 'Status colors stay consistent: amber for registration, green for ongoing, blue for completed.':['स्थिति के रंग समान रहेंगे: पंजीकरण के लिए अंबर, जारी के लिए हरा और समाप्त के लिए नीला।','સ્થિતિના રંગો સમાન રહેશે: નોંધણી માટે અંબર, ચાલુ માટે લીલો અને પૂર્ણ માટે વાદળી.'],
+ 'Ongoing':['जारी है','ચાલુ છે'],'Draft':['ड्राफ़्ट','ડ્રાફ્ટ'],
+});
+
+Object.assign(messages,{
+ 'Overview':['अवलोकन','ઝાંખી'],'Activity':['गतिविधि','પ્રવૃત્તિ'],
+ 'Manage your cricket community, appearance and support in one place.':['अपनी क्रिकेट कम्युनिटी, रंग और सहायता एक जगह संभालें।','તમારી ક્રિકેટ કોમ્યુનિટી, દેખાવ અને સહાય એક જગ્યાએ સંભાળો.'],
+ 'Sign in with an administrator account to manage KingCric.':['किंगक्रिक संभालने के लिए एडमिन खाते से साइन इन करें।','કિંગક્રિક સંભાળવા એડમિન એકાઉન્ટથી સાઇન ઇન કરો.'],
+ 'Current appearance':['वर्तमान रंग','હાલનો દેખાવ'],'Choose color combination':['रंगों का संयोजन चुनें','રંગોનું સંયોજન પસંદ કરો'],
+ 'Administration activity':['प्रशासन की गतिविधि','વહીવટી પ્રવૃત્તિ'],'View activity':['गतिविधि देखें','પ્રવૃત્તિ જુઓ'],
+ 'Review recent changes made by administrators and tournament organizers.':['एडमिन और आयोजकों के हाल के बदलाव देखें।','એડમિન અને આયોજકોના તાજેતરના ફેરફારો જુઓ.'],
+ 'Live matches':['लाइव मैच','લાઇવ મેચો'],'Open reports':['खुली शिकायतें','ખુલ્લી ફરિયાદો'],'Suspended users':['निलंबित उपयोगकर्ता','સ્થગિત વપરાશકર્તાઓ'],
+ 'Search users':['उपयोगकर्ता खोजें','વપરાશકર્તા શોધો'],'Search by name or email':['नाम या ईमेल से खोजें','નામ કે ઈમેઇલથી શોધો'],
+ 'All users':['सभी उपयोगकर्ता','બધા વપરાશકર્તાઓ'],'Active':['सक्रिय','સક્રિય'],'Suspended':['निलंबित','સ્થગિત'],
+ 'Administrator':['एडमिन','એડમિન'],'Organizer':['आयोजक','આયોજક'],'Player':['खिलाड़ी','ખેલાડી'],
+ 'Suspend account':['खाता निलंबित करें','એકાઉન્ટ સ્થગિત કરો'],'Restore account':['खाता बहाल करें','એકાઉન્ટ પુનઃસ્થાપિત કરો'],
+ 'This user will be able to sign in again.':['यह उपयोगकर्ता फिर से साइन इन कर सकेगा।','આ વપરાશકર્તા ફરી સાઇન ઇન કરી શકશે.'],
+ 'This user will be signed out and unable to sign in until restored.':['उपयोगकर्ता साइन आउट हो जाएगा और बहाली तक साइन इन नहीं कर सकेगा।','વપરાશકર્તા સાઇન આઉટ થશે અને પુનઃસ્થાપિત થાય ત્યાં સુધી સાઇન ઇન નહીં કરી શકે.'],
+ 'No users match this selection.':['इस चयन में कोई उपयोगकर्ता नहीं मिला।','આ પસંદગીમાં કોઈ વપરાશકર્તા મળ્યો નહીં.'],
+ 'No reports match this selection.':['इस चयन में कोई शिकायत नहीं मिली।','આ પસંદગીમાં કોઈ ફરિયાદ મળી નહીં.'],
+ 'No activity yet.':['अभी कोई गतिविधि नहीं।','હજી કોઈ પ્રવૃત્તિ નથી.'],
+ 'All reports':['सभी शिकायतें','બધી ફરિયાદો'],'Open':['खुली','ખુલ્લી'],'Reopen':['फिर खोलें','ફરી ખોલો'],
+ 'Open tournament':['टूर्नामेंट खोलें','ટુર્નામેન્ટ ખોલો'],
+ 'Unable to load this section. Please retry.':['यह भाग लोड नहीं हुआ। फिर कोशिश करें।','આ વિભાગ લોડ થયો નહીં. ફરી પ્રયાસ કરો.'],
+ 'Previous':['पिछला','અગાઉનું'],'Next':['अगला','આગળનું'],'items':['आइटम','આઇટમ'],
+ 'Teal & Ice':['टील और आइस','ટીલ અને આઇસ'],'Violet & Lavender':['वायलेट और लैवेंडर','વાયોલેટ અને લવેન્ડર'],
+ 'Coral & Peach':['कोरल और पीच','કોરલ અને પીચ'],'Navy & Gold':['नेवी और गोल्ड','નેવી અને ગોલ્ડ'],
+ 'Mint & Forest':['मिंट और फॉरेस्ट','મિન્ટ અને ફોરેસ્ટ'],'Burgundy & Rose':['बरगंडी और रोज़','બર્ગન્ડી અને રોઝ'],
+ 'Indigo & Sky':['इंडिगो और स्काई','ઇન્ડિગો અને સ્કાય'],'Slate & Silver':['स्लेट और सिल्वर','સ્લેટ અને સિલ્વર'],
+});

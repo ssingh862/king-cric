@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { StyleSheet,  View } from 'react-native';
@@ -10,6 +11,7 @@ interface RemainingSquadBarProps {
 }
 
 export function RemainingSquadBar({ label, players }: RemainingSquadBarProps) {
+ useBranding(s=>s.palette);
   if (!players.length) return null;
 
   return (

@@ -1,3 +1,4 @@
+import { useBranding } from '../src/stores/brandingStore';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ function zoneFor(level: Level) {
 }
 
 export default function PlayScreen() {
+ useBranding(s=>s.palette);
   const [level, setLevel] = useState<Level>('normal');
   const [phase, setPhase] = useState<Phase>('ready');
   const [target, setTarget] = useState(12);

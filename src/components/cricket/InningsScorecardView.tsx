@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import {
@@ -21,6 +22,7 @@ function TableHeader({
 }: {
   cols: { label: string; width: number; align?: "left" | "center" }[];
 }) {
+ useBranding(s=>s.palette);
   return (
     <View style={styles.tableHeader}>
       {cols.map((c) => (
@@ -44,6 +46,7 @@ export function InningsScorecardView({
   refreshing = false,
   onRefresh,
 }: InningsScorecardViewProps) {
+ useBranding(s=>s.palette);
   const { extras } = data;
 
   return (

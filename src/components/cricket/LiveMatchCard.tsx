@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ interface LiveMatchCardProps {
 }
 
 function MatchWhen({ value }: { value?: string | null }) {
+ useBranding(s=>s.palette);
   const parts = matchDayParts(matchDayKey(value));
   return (
     <Text style={styles.when}>
@@ -39,6 +41,7 @@ function MatchWhen({ value }: { value?: string | null }) {
 }
 
 export function LiveMatchCard({ match, index = 0 }: LiveMatchCardProps) {
+ useBranding(s=>s.palette);
   const teamA = match.team_a?.short_name ?? match.team_a?.name ?? 'Team A';
   const teamB = match.team_b?.short_name ?? match.team_b?.name ?? 'Team B';
 

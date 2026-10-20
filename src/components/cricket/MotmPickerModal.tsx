@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import {
@@ -32,6 +33,7 @@ export function MotmPickerModal({
   onSelect,
   onClose,
 }: MotmPickerModalProps) {
+ useBranding(s=>s.palette);
   const insets = useSafeAreaInsets();
   if (!visible || !outcome) return null;
 

@@ -1,3 +1,4 @@
+import { useBranding } from '../src/stores/brandingStore';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, Pressable, Share, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ interface Detail {
 }
 
 function Logo({ uri, size = 48 }: { uri?: string | null; size?: number }) {
+ useBranding(s=>s.palette);
   if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: 14 }} />;
   return (
     <View style={[ui.logoFallback, { width: size, height: size, borderRadius: 14 }]}>
@@ -39,6 +41,7 @@ function Logo({ uri, size = 48 }: { uri?: string | null; size?: number }) {
 }
 
 export default function OrganizerSettings() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const client = useQueryClient();
   const [selected, setSelected] = useState(typeof id === 'string' ? id : '');

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import * as React from 'react';
@@ -51,6 +52,7 @@ export function WicketPickerModal({
   onConfirm,
   onClose,
 }: WicketPickerModalProps) {
+ useBranding(s=>s.palette);
   const insets = useSafeAreaInsets();
   const [wicketType, setWicketType] = React.useState<WicketTypeInput | null>(null);
   const [dismissedId, setDismissedId] = React.useState<string | null>(null);

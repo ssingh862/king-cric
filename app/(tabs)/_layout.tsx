@@ -1,12 +1,15 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { createThemedStyles } from '../../src/lib/theme';
 import { useTranslation } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { colors, shadows } from '../../src/lib/theme';
 
 export default function TabLayout() {
+ useBranding(s=>s.palette);
   const {t}=useTranslation();
+  const {width}=useWindowDimensions();
   return (
     <Tabs
       backBehavior="history"
@@ -14,8 +17,10 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.orange,
         tabBarInactiveTintColor: colors.textDim,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700',paddingBottom:4 },
+        tabBarActiveBackgroundColor:colors.orangeLight,
+        tabBarItemStyle:{borderRadius:14,marginHorizontal:5,marginVertical:3},
+        tabBarStyle: [styles.tabBar,Platform.OS==='web'&&width>=1000?{display:'none'}:undefined],
       }}
     >
       <Tabs.Screen

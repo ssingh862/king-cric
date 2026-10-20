@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { Pressable, StyleSheet,  View } from 'react-native';
@@ -35,6 +36,7 @@ function formatScoreLine(runs: number | null, wickets: number, overs: number | n
 }
 
 function TeamScoreRow({ team }: { team: TeamInningsSummary }) {
+ useBranding(s=>s.palette);
   const accent = team.color ?? colors.orange;
 
   return (
@@ -71,6 +73,7 @@ export function MatchCompleteCard({
   onPressScorecard,
   compact,
 }: MatchCompleteCardProps) {
+ useBranding(s=>s.palette);
   const cleanSummary = resultSummary
     ? resultSummary.replace(/\s*Player of the Match:.*$/i, '').trim()
     : '';

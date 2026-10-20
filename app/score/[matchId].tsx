@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -60,6 +61,7 @@ import { isApiConfigured } from '../../src/lib/api';
 import { useAuthStore } from '../../src/stores/authStore';
 
 export default function ScoringScreen() {
+ useBranding(s=>s.palette);
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);

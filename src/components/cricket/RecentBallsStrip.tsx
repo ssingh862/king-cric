@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { ScrollView, StyleSheet,  View } from 'react-native';
@@ -19,6 +20,7 @@ function ballLabel(e: ScoreEvent): string {
 }
 
 export function RecentBallsStrip({ events }: RecentBallsStripProps) {
+ useBranding(s=>s.palette);
   const recent = dedupeScoreEvents(events).slice(-12).reverse();
 
   if (!recent.length) {

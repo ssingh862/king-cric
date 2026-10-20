@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { Modal, Platform, Pressable, StyleSheet,  View } from 'react-native';
@@ -13,6 +14,7 @@ interface MatchResultModalProps {
 }
 
 export function MatchResultModal({ visible, outcome, onDone }: MatchResultModalProps) {
+ useBranding(s=>s.palette);
   const insets = useSafeAreaInsets();
   if (!visible || !outcome) return null;
 

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import type { MatchRules } from '../../lib/cricket/types';
@@ -33,6 +34,7 @@ interface ScoringPadProps {
 }
 
 export function ScoringPad({ onBall, disabled, rules }: ScoringPadProps) {
+ useBranding(s=>s.palette);
   const [additionalRuns, setAdditionalRuns] = useState(0);
   const [selected, setSelected] = useState<BallType | null>(null);
 
@@ -198,9 +200,9 @@ const styles = createThemedStyles({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  fourBtn: { borderColor: colors.blue, backgroundColor: "#EFF6FF" },
+  fourBtn: { borderColor: colors.blue, backgroundColor: colors.infoLight },
   sixBtn: { borderColor: colors.orange, backgroundColor: colors.orangeLight },
-  extraBtn: { backgroundColor: "#F5F3FF", borderColor: "#DDD6FE" },
+  extraBtn: { backgroundColor: colors.surface, borderColor: colors.cardBorder },
   wicketBtn: {
     flex: 1.5,
     backgroundColor: colors.liveLight,
@@ -218,7 +220,7 @@ const styles = createThemedStyles({
   },
   btnText: { color: colors.text, fontSize: 18, fontWeight: "800" },
   sixText: { color: colors.orange },
-  extraText: { color: colors.purple, fontSize: 14, fontWeight: "700" },
+  extraText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
   wicketText: { color: colors.live, fontSize: 14, fontWeight: "800" },
   selectedText: { color: colors.orange },
   textDisabled: { color: colors.textMuted },

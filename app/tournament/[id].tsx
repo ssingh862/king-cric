@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -24,6 +25,7 @@ import { colors } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 
 function DayLabel({ day }: { day: string }) {
+ useBranding(s=>s.palette);
   const parts = matchDayParts(day);
   return (
     <Text style={styles.dayLabel}>
@@ -40,6 +42,7 @@ const DEMO_POINTS = [
 ];
 
 export default function TournamentScreen() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);

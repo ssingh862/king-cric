@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { StyleSheet,  View } from 'react-native';
@@ -12,6 +13,7 @@ import { useEffect } from 'react';
 import { colors } from '../../lib/theme';
 
 export function LiveBadge() {
+ useBranding(s=>s.palette);
   const opacity = useSharedValue(1);
 
   useEffect(() => {

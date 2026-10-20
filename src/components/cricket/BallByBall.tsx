@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { Text } from '../../i18n';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -31,6 +32,7 @@ function outcome(ball: ScoreEvent): { label: string; extra: number; tone: 'four'
 }
 
 export function BallByBall({ matchId, teamAId, teamBId }: { matchId: string; teamAId?: string; teamBId?: string }) {
+ useBranding(s=>s.palette);
   const events = useQuery({
     queryKey: ['match-score-events', matchId],
     enabled: !!matchId,

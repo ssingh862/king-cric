@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { Pressable, StyleSheet,  View } from 'react-native';
@@ -18,6 +19,7 @@ interface ActivePlayersBarProps {
 }
 
 function StrikerCard({ name, vacant }: { name: string; vacant?: boolean }) {
+ useBranding(s=>s.palette);
   return (
     <View style={[styles.strikerCard, vacant && styles.strikerVacant]}>
       <View style={styles.strikerTop}>
@@ -38,6 +40,7 @@ function StrikerCard({ name, vacant }: { name: string; vacant?: boolean }) {
 }
 
 function NonStrikerCard({ name, vacant }: { name: string; vacant?: boolean }) {
+ useBranding(s=>s.palette);
   return (
     <View style={[styles.nonStrikerCard, vacant && styles.nonStrikerVacant]}>
       <View style={styles.nonStrikerHeader}>
@@ -52,6 +55,7 @@ function NonStrikerCard({ name, vacant }: { name: string; vacant?: boolean }) {
 }
 
 function BowlerCard({ name }: { name: string }) {
+ useBranding(s=>s.palette);
   return (
     <View style={styles.bowlerCard}>
       <View style={styles.bowlerHeader}>
@@ -72,6 +76,7 @@ export function ActivePlayersBar({
   highlightVacant,
   onChangePlayers,
 }: ActivePlayersBarProps) {
+ useBranding(s=>s.palette);
   return (
     <View style={[styles.wrap, shadows.card]}>
       <View style={styles.titleRow}>

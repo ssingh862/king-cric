@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert, TextInput } from '../../src/i18n';
 import { Text } from '../../src/i18n';
 import { useEffect, useState } from 'react';
@@ -15,6 +16,7 @@ import { colors } from '../../src/lib/theme';
 import { canManageTournament } from '../../src/lib/permissions';
 import { useAuthStore } from '../../src/stores/authStore';
 export default function MatchSettings(){
+ useBranding(s=>s.palette);
  const {matchId}=useLocalSearchParams<{matchId:string}>(); const {data:match,isError}=useMatch(matchId); const cache=useQueryClient(); const profile=useAuthStore(s=>s.profile);
  const [rules,setRules]=useState(standardLocalRules),[venue,setVenue]=useState(''),[overs,setOvers]=useState('20'),[busy,setBusy]=useState(false);
  useEffect(()=>{if(match){setRules({...standardLocalRules,...match.rules});setVenue(match.venue??'');setOvers(String(match.overs_per_innings));}},[match]);

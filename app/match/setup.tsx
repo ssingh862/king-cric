@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -28,6 +29,7 @@ type PickField = 'striker' | 'non_striker' | 'bowler' | null;
 type SetupStep = 'toss' | 'players';
 
 export default function MatchSetupScreen() {
+ useBranding(s=>s.palette);
   const { matchId, innings: inningsParam, target } = useLocalSearchParams<{
     matchId: string;
     innings?: string;
@@ -341,6 +343,7 @@ export default function MatchSetupScreen() {
 }
 
 function StepPill({ label, active, done }: { label: string; active: boolean; done: boolean }) {
+ useBranding(s=>s.palette);
   return (
     <View style={[styles.stepPill, (active || done) && styles.stepPillActive]}>
       {done ? (
@@ -362,6 +365,7 @@ function SummaryRow({
   value: string;
   highlight?: boolean;
 }) {
+ useBranding(s=>s.palette);
   return (
     <View style={styles.summaryRow}>
       <Ionicons name={icon} size={18} color={highlight ? colors.orange : colors.textMuted} />
@@ -386,6 +390,7 @@ function PlayerSelectRow({
   onPress: () => void;
   disabled?: boolean;
 }) {
+ useBranding(s=>s.palette);
   return (
     <Pressable
       style={[styles.playerRow, player && styles.playerRowFilled, disabled && styles.playerRowDisabled]}

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { useMemo } from "react";
@@ -47,6 +48,7 @@ function tableWidth(cols: ColDef[]) {
 }
 
 function StatHeader({ cols }: { cols: ColDef[] }) {
+ useBranding(s=>s.palette);
   return (
     <View style={styles.headerRow}>
       {cols.map((c) => (
@@ -73,6 +75,7 @@ function Cell({
   bold?: boolean;
   alignLeft?: boolean;
 }) {
+ useBranding(s=>s.palette);
   return (
     <Text
       style={[
@@ -99,6 +102,7 @@ function BatsmanCell({
   isStriker: boolean;
   isOut: boolean;
 }) {
+ useBranding(s=>s.palette);
   return (
     <View style={[styles.batsmanCell, { width }]}>
       {isStriker ? (
@@ -132,6 +136,7 @@ function BowlerCell({
   name: string;
   isBowling: boolean;
 }) {
+ useBranding(s=>s.palette);
   return (
     <View style={[styles.batsmanCell, { width }]}>
       {isBowling ? (
@@ -165,6 +170,7 @@ export function MatchPlayerStats({
   nonStrikerId,
   bowlerId,
 }: MatchPlayerStatsProps) {
+ useBranding(s=>s.palette);
   const uniqueEvents = dedupeScoreEvents(events);
   const batters = battingStatsForDisplay(uniqueEvents, {
     strikerId,

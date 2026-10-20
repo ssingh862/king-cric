@@ -204,6 +204,7 @@ export default function Settings() {
       ) : null}
       {section === 'admin' ? (
         <Card title="Platform administration">
+          <LinkRow icon="color-palette-outline" title="Brand appearance" onPress={() => router.push('/admin')} />
           <LinkRow title="Users" onPress={() => router.push('/admin')} />
         </Card>
       ) : null}

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { Alert, TextInput } from '../../i18n';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
@@ -47,6 +48,7 @@ export function TournamentLogoField({
   onLogo: (value: string | null) => void;
   featured?: boolean;
 }) {
+ useBranding(s=>s.palette);
   const choose = () => pickTournamentLogo(onLogo);
   return (
     <View style={featured ? styles.featured : undefined}>
@@ -78,6 +80,7 @@ export function TournamentLogoField({
 }
 
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+ useBranding(s=>s.palette);
   const [open, setOpen] = useState(false);
   const selected = value ? new Date(`${value}T00:00:00`) : new Date();
   return (
@@ -141,6 +144,7 @@ export function TournamentProfileFields({
   onBallType: (value: TournamentBallType) => void;
   showLogo?: boolean;
 }) {
+ useBranding(s=>s.palette);
 
   return (
     <View>

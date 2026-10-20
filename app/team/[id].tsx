@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { useState } from 'react';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -24,6 +25,7 @@ async function pickPlayerPhoto(playerId: string, refetch: () => Promise<unknown>
 }
 
 export default function TeamScreen() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id: string }>();
   const profile = useAuthStore((s) => s.profile);
   const { data: team, isLoading, refetch } = useTeam(id ?? '');

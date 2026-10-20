@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -14,6 +15,7 @@ type Career = {
 };
 
 export default function PlayerScreen() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id: string }>();
   const career = useQuery({ queryKey: ['player-career', id], enabled: !!id, queryFn: () => api<Career>(`/players/${id}/career`) });
   const stats = career.data?.stats;

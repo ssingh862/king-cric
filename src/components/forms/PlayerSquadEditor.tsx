@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { TextInput } from '../../i18n';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
@@ -33,6 +34,7 @@ interface PlayerSquadEditorProps {
 }
 
 export function PlayerSquadEditor({ players, onChange }: PlayerSquadEditorProps) {
+ useBranding(s=>s.palette);
   const update = (key: string, patch: Partial<SquadPlayerDraft>) => {
     onChange(players.map((p) => (p.key === key ? { ...p, ...patch } : p)));
   };

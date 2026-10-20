@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { ScrollView, StyleSheet,  View } from 'react-native';
@@ -10,6 +11,7 @@ interface PointsTableProps {
 }
 
 export function PointsTable({ rows }: PointsTableProps) {
+ useBranding(s=>s.palette);
   const sorted = [...rows].sort(
     (a, b) => b.points - a.points || Number(b.net_run_rate) - Number(a.net_run_rate)
   );

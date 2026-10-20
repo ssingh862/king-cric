@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +32,7 @@ export function GradientButton({
   variant = 'primary',
   style,
 }: GradientButtonProps) {
+ useBranding(s=>s.palette);
   const scale = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -38,18 +40,19 @@ export function GradientButton({
   }));
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onPress();
   };
 
   if (variant === 'outline') {
     return (
       <AnimatedPressable
-        onPressIn={() => { scale.value = withSpring(0.96); }}
+        onPressIn={() => { scale.value = withSpring(0.985); }}
         onPressOut={() => { scale.value = withSpring(1); }}
         onPress={handlePress}
         disabled={disabled || loading}
-        style={[styles.outline, animStyle, style]}
+        accessibilityRole="button" accessibilityState={{disabled:!!(disabled || loading),busy:!!loading}}
+        style={[styles.outline, animStyle, style, (disabled || loading) && {opacity:0.5}]}
       >
         {loading ? (
           <ActivityIndicator color={colors.orange} />
@@ -62,11 +65,12 @@ export function GradientButton({
 
   return (
     <AnimatedPressable
-      onPressIn={() => { scale.value = withSpring(0.96); }}
+      onPressIn={() => { scale.value = withSpring(0.985); }}
       onPressOut={() => { scale.value = withSpring(1); }}
       onPress={handlePress}
       disabled={disabled || loading}
-      style={[animStyle, style]}
+      accessibilityRole="button" accessibilityState={{disabled:!!(disabled || loading),busy:!!loading}}
+      style={[animStyle, style, (disabled || loading) && {opacity:0.5}]}
     >
       <LinearGradient
         colors={[colors.orange, colors.orangeDark]}
@@ -86,28 +90,32 @@ export function GradientButton({
 
 const styles = createThemedStyles({
   gradient: {
-    paddingVertical: 16,
+    minHeight: 52,
+    justifyContent: 'center',
+    paddingVertical: 15,
     paddingHorizontal: 24,
     borderRadius: radius.md,
     alignItems: 'center',
   },
   text: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   outline: {
-    paddingVertical: 16,
+    minHeight: 52,
+    justifyContent: 'center',
+    paddingVertical: 15,
     paddingHorizontal: 24,
     borderRadius: radius.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.orange,
     alignItems: 'center',
   },
   outlineText: {
     color: colors.orange,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

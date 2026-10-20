@@ -1,3 +1,4 @@
+import { useBranding } from '../src/stores/brandingStore';
 import { Alert, TextInput } from '../src/i18n';
 import { createThemedStyles } from '../src/lib/theme';
 import { Text } from '../src/i18n';
@@ -23,6 +24,7 @@ import { useAuthStore } from '../src/stores/authStore';
 import { useTournament } from '../src/hooks/useTournaments';
 
 export default function RegisterTeamScreen() {
+ useBranding(s=>s.palette);
   const { tournamentId } = useLocalSearchParams<{ tournamentId: string }>();
   const queryClient = useQueryClient();
   const { profile } = useAuthStore();

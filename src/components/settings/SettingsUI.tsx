@@ -1,8 +1,10 @@
+import { ScreenHeader } from '../ui/ScreenHeader';
+import { useBranding } from '../../stores/brandingStore';
 import { TextInput } from '../../i18n';
 import { colors, createThemedStyles, shadows } from '../../lib/theme';
 import type { ReactNode } from 'react';
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, Image, Pressable, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, RefreshControl, View, Platform } from 'react-native';
 import { KeyboardForm } from '../ui/KeyboardForm';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -47,9 +49,9 @@ export const styles = createThemedStyles({
   label: { color: colors.text, fontWeight: '600', fontSize: 14, marginBottom: 8 },
   sub: { color: colors.textMuted, lineHeight: 21, marginBottom: 14 },
   input: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 14, padding: 14, color: colors.text, backgroundColor: colors.inputBg, marginBottom: 14, fontSize: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingVertical: 14 },
   iconWrap: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  rowTitle: { color: colors.text, fontWeight: '700', fontSize: 16 },
+  rowTitle: { color: colors.text, fontWeight: '700', fontSize: 15 },
   rowValue: { color: colors.textMuted, fontSize: 14, marginRight: 2 },
   button: { padding: 15, borderRadius: 14, backgroundColor: colors.orange, alignItems: 'center', marginTop: 8, marginBottom: 8 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
@@ -59,20 +61,17 @@ export const styles = createThemedStyles({
   choiceOn: { borderColor: colors.orange, backgroundColor: colors.orangeLight },
 });
 
-export function Page({ title, children, onBack, refreshing, onRefresh }: { title: string; children: ReactNode; onBack?: () => void; refreshing?: boolean; onRefresh?: () => void }) {
+export function Page({ title, children, onBack, refreshing, onRefresh, fullWidth = false }: { title: string; children: ReactNode; onBack?: () => void; refreshing?: boolean; onRefresh?: () => void; fullWidth?: boolean }) {
+ useBranding(s=>s.palette);
   const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.page}>
       <KeyboardForm
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={{...styles.scroll,...(fullWidth && Platform.OS==='web'?{maxWidth:'100%' as const,paddingHorizontal:24}: {})}}
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={colors.orange} /> : undefined}
       >
-        <View style={styles.header}>
-          <Pressable accessibilityLabel={t('Back')} style={styles.back} onPress={() => onBack ? onBack() : router.canGoBack() ? router.back() : router.replace('/(tabs)/profile')}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </Pressable>
-          <Text style={styles.title}>{title}</Text>
-        </View>
+        <ScreenHeader title={title} back onBack={()=>onBack?onBack():router.canGoBack()?router.back():router.replace('/(tabs)/profile')}/>
+
         {children}
       </KeyboardForm>
     </SafeAreaView>
@@ -80,6 +79,7 @@ export function Page({ title, children, onBack, refreshing, onRefresh }: { title
 }
 
 export function Group({ title, children }: { title: string; children: ReactNode }) {
+ useBranding(s=>s.palette);
   return (
     <View>
       <Text style={styles.group}>{title}</Text>
@@ -89,6 +89,7 @@ export function Group({ title, children }: { title: string; children: ReactNode 
 }
 
 export function Hero({ name, meta, photo }: { name: string; meta: string; photo?: string | null }) {
+ useBranding(s=>s.palette);
   return (
     <LinearGradient colors={[colors.forest, colors.orange]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
       <View style={styles.avatar}>
@@ -103,10 +104,12 @@ export function Hero({ name, meta, photo }: { name: string; meta: string; photo?
 }
 
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
+ useBranding(s=>s.palette);
   return <View style={styles.card}>{title ? <Text style={styles.heading}>{title}</Text> : null}{children}</View>;
 }
 
 export function Field({ label, value, onChange, secure = false, multiline = false, keyboard = 'default' }: { label: string; value: string; onChange: (v: string) => void; secure?: boolean; multiline?: boolean; keyboard?: 'default' | 'email-address' }) {
+ useBranding(s=>s.palette);
   const { t } = useTranslation();
   return (
     <>
@@ -117,6 +120,7 @@ export function Field({ label, value, onChange, secure = false, multiline = fals
 }
 
 export function Button({ title, onPress, busy = false, danger = false }: { title: string; onPress: () => void; busy?: boolean; danger?: boolean }) {
+ useBranding(s=>s.palette);
   return (
     <Pressable accessibilityRole="button" disabled={busy} style={[styles.button, danger && styles.danger, busy && { opacity: 0.5 }]} onPress={onPress}>
       {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{title}</Text>}
@@ -125,6 +129,7 @@ export function Button({ title, onPress, busy = false, danger = false }: { title
 }
 
 export function LinkRow({ title, value, selected, onPress, icon, tint }: { title: string; value?: string; selected?: boolean; onPress: () => void; icon?: IconName; tint?: string }) {
+ useBranding(s=>s.palette);
   const chosen = selected === true;
   return (
     <Pressable accessibilityRole={selected === undefined ? 'button' : 'radio'} accessibilityState={selected === undefined ? undefined : { checked: selected }} style={styles.row} onPress={onPress}>
@@ -141,6 +146,7 @@ export function LinkRow({ title, value, selected, onPress, icon, tint }: { title
 }
 
 export function Choice({ title, subtitle, selected, onPress, icon }: { title: string; subtitle?: string; selected: boolean; onPress: () => void; icon: IconName }) {
+ useBranding(s=>s.palette);
   return (
     <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={onPress} style={[styles.choice, selected && styles.choiceOn]}>
       <View style={[styles.iconWrap, { backgroundColor: selected ? colors.card : colors.surface }]}>

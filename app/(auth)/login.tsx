@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { TextInput } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { LanguagePicker } from '../../src/components/settings/LanguagePicker';
@@ -13,6 +14,7 @@ import { GradientButton } from '../../src/components/ui/GradientButton';
 import { colors } from '../../src/lib/theme';
 import { useAuthStore } from '../../src/stores/authStore';
 export default function LoginScreen(){
+ useBranding(s=>s.palette);
  const {signInWithEmail,signUpWithEmail,resetPassword}=useAuthStore();
  const [mode,setMode]=useState<'signin'|'signup'>('signin'),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[photo,setPhoto]=useState(''),[visible,setVisible]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const pickPhoto=async()=>{const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:['images'],allowsEditing:true,aspect:[1,1],quality:0.4,base64:true});if(result.canceled)return;const asset=result.assets[0];if(!asset?.base64||asset.base64.length>850000){setError('Choose a smaller photo');return;}const mime=asset.mimeType==='image/jpg'?'image/jpeg':(asset.mimeType??'image/jpeg');if(!/^image\/(png|jpeg|webp)$/.test(mime)){setError('Choose a smaller photo');return;}setError('');setPhoto(`data:${mime};base64,${asset.base64}`);};

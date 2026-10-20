@@ -1,3 +1,5 @@
+import { ScreenHeader } from '../../src/components/ui/ScreenHeader';
+import { useBranding } from '../../src/stores/brandingStore';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,14 +21,16 @@ const MENU = [
 ];
 
 export default function ProfileScreen() {
+ useBranding(s=>s.palette);
   const { profile, userEmail, signOut } = useAuthStore();
 
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll}>
+          <ScreenHeader title="Profile" subtitle="Your cricket, your way."/>
           <View style={styles.avatarWrap}>
-            {profile?.avatar_url ? <Image source={{uri:profile.avatar_url}} style={styles.avatar}/> : <LinearGradient colors={[colors.orange, colors.purple]} style={styles.avatar}>
+            {profile?.avatar_url ? <Image source={{uri:profile.avatar_url}} style={styles.avatar}/> : <LinearGradient colors={[colors.forest, colors.orange]} style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {(profile?.full_name ?? 'U')[0].toUpperCase()}
               </Text>
@@ -47,7 +51,7 @@ export default function ProfileScreen() {
                 style={styles.menuRow}
                 onPress={() => item.route && (item.route.startsWith('/(tabs)') ? router.navigate(item.route as never) : router.push(item.route as never))}
               >
-                <Ionicons name={item.icon} size={22} color={item.color} />
+                <View style={{width:42,height:42,borderRadius:13,backgroundColor:colors.orangeLight,alignItems:'center',justifyContent:'center'}}><Ionicons name={item.icon} size={21} color={colors.orange} /></View>
                 <Text style={styles.menuLabel}>{item.label}</Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
               </Pressable>
@@ -65,7 +69,7 @@ const styles = createThemedStyles({
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 40 },
-  avatarWrap: { alignItems: 'center', marginBottom: 28, marginTop: 20 },
+  avatarWrap: { alignItems: 'center', marginBottom: 24, paddingVertical: 24, borderRadius: 22, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.cardBorder },
   avatar: {
     width: 88,
     height: 88,
@@ -97,5 +101,5 @@ const styles = createThemedStyles({
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
-  menuLabel: { flex: 1, color: colors.text, fontSize: 16 },
+  menuLabel: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' },
 });

@@ -1,3 +1,5 @@
+import { ScreenHeader } from '../../src/components/ui/ScreenHeader';
+import { useBranding } from '../../src/stores/brandingStore';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
 import { useFocusEffect } from 'expo-router';
@@ -24,6 +26,7 @@ type MatchCard = {
 };
 
 function DayHeading({ day }: { day: string }) {
+ useBranding(s=>s.palette);
   const parts = matchDayParts(day);
   return (
     <Text style={styles.dayTitle}>
@@ -33,6 +36,7 @@ function DayHeading({ day }: { day: string }) {
 }
 
 export default function LiveScreen() {
+ useBranding(s=>s.palette);
   const queryClient = useQueryClient();
   const { data: liveData, isLoading: liveLoading } = useLiveMatches();
   const { data: upcomingData, isLoading: upcomingLoading } = useUpcomingMatches();
@@ -54,8 +58,7 @@ export default function LiveScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.flex}>
-        <Text style={styles.title}>Matches</Text>
-        <Text style={styles.sub}>Live scores and completed results</Text>
+        <ScreenHeader title="Matches" subtitle="Live scores and completed results"/>
         <ScrollView contentContainerStyle={styles.scroll}>
           {loading ? (
             <ActivityIndicator color={colors.orange} style={{ marginTop: 40 }} />

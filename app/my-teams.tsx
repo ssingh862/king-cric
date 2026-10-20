@@ -1,3 +1,5 @@
+import { ScreenHeader } from '../src/components/ui/ScreenHeader';
+import { useBranding } from '../src/stores/brandingStore';
 import { createThemedStyles } from '../src/lib/theme';
 import { Text } from '../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +14,7 @@ import { colors, radius } from '../src/lib/theme';
 import { useAuthStore } from '../src/stores/authStore';
 
 export default function MyTeamsScreen() {
+ useBranding(s=>s.palette);
   const { profile } = useAuthStore();
   const { data: teams, isLoading } = useMyTeams(profile?.id);
 
@@ -20,14 +23,7 @@ export default function MyTeamsScreen() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.title}>My teams</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
+        <View style={{paddingHorizontal:20}}><ScreenHeader title="My teams" subtitle="Build your playing squad" back/></View>
         <ScrollView contentContainerStyle={styles.scroll}>
           <GradientButton title="Create team" onPress={()=>router.push('/clubs' as never)} style={{marginBottom:12}}/>
           <GradientButton title="Invitations" variant="outline" onPress={()=>router.push('/invitations' as never)} style={{marginBottom:20}}/>

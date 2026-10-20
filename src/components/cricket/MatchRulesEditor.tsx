@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { StyleSheet, Switch,  View, Pressable } from 'react-native';
@@ -6,6 +7,7 @@ import type { MatchRules } from '../../lib/cricket/types';
 import { colors } from '../../lib/theme';
 export const standardLocalRules: Partial<MatchRules> = { widePenaltyRuns: 1, noBallPenaltyRuns: 1, wideCountsAsBall: false, noBallCountsAsBall: false, freeHitOnNoBall: true, allowByes: true, allowLegByes: true, lastBatterStands: false };
 export function MatchRulesEditor({ value, onChange, disabled=false }: { value: Partial<MatchRules>; onChange: (v: Partial<MatchRules>)=>void; disabled?: boolean }) {
+ useBranding(s=>s.palette);
  const update=(key:keyof MatchRules,v:number|boolean)=>onChange({...value,[key]:v});
  return <View style={s.card}>
   <View style={s.head}><Ionicons name="options-outline" size={22} color={colors.orange}/><View style={{flex:1}}><Text style={s.title}>Your match, your rules</Text><Text style={s.sub}>Agree these with both captains before the toss.</Text></View></View>

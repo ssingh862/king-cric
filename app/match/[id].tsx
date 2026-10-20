@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -48,6 +49,7 @@ import { useAuthStore } from "../../src/stores/authStore";
 import type { Innings } from "../../src/types/database";
 
 export default function MatchScreen() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);
@@ -599,7 +601,7 @@ export default function MatchScreen() {
                 }
               >
                 <LinearGradient
-                  colors={[colors.purple, colors.blue]}
+                  colors={[colors.orange, colors.orangeDark]}
                   style={styles.scoreBtnGrad}
                 >
                   <Ionicons name="play" size={20} color="#fff" />
@@ -626,7 +628,7 @@ export default function MatchScreen() {
                   }
                 >
                   <LinearGradient
-                    colors={[colors.purple, colors.blue]}
+                    colors={[colors.orange, colors.orangeDark]}
                     style={styles.scoreBtnGrad}
                   >
                     <Ionicons name="play-forward" size={20} color="#fff" />
@@ -643,7 +645,7 @@ export default function MatchScreen() {
                 onPress={() => router.push(`/score/${id}`)}
               >
                 <LinearGradient
-                  colors={[colors.orange, colors.pink]}
+                  colors={[colors.orange, colors.orangeDark]}
                   style={styles.scoreBtnGrad}
                 >
                   <Ionicons name="create" size={20} color="#fff" />

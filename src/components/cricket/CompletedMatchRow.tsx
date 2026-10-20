@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { Text } from '../../i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
@@ -30,6 +31,7 @@ function sideName(team?: Side) {
 }
 
 export function CompletedMatchRow({ match, onLongPress }: { match: CompletedMatch; onLongPress?: () => void }) {
+ useBranding(s=>s.palette);
   const [open, setOpen] = useState(false);
   const teamA = sideName(match.team_a);
   const teamB = sideName(match.team_b);

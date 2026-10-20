@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { StyleSheet,  View } from 'react-native';
@@ -9,6 +10,7 @@ interface ChaseBannerProps {
 }
 
 export function ChaseBanner({ chase }: ChaseBannerProps) {
+ useBranding(s=>s.palette);
   if (!chase) return null;
 
   return (

@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert, TextInput } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -25,6 +26,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 import { squadLockMessage } from '../../src/lib/squadLock';
 
 export default function EditTeamScreen() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);

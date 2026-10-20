@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { Alert, TextInput } from '../../src/i18n';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
@@ -20,6 +21,7 @@ import { useAuthStore } from '../../src/stores/authStore';
 const STATUSES = ['draft', 'registration', 'ongoing', 'completed'] as const;
 
 export default function EditTournamentScreen() {
+ useBranding(s=>s.palette);
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);

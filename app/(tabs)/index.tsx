@@ -1,3 +1,4 @@
+import { useBranding } from '../../src/stores/brandingStore';
 import { createThemedStyles } from '../../src/lib/theme';
 import { Text } from '../../src/i18n';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ function initials(name?: string | null) {
 }
 
 export default function HomeScreen() {
+ useBranding(s=>s.palette);
   const profile = useAuthStore(s => s.profile);
   const live = useLiveMatches(), upcoming = useUpcomingMatches(), completed = useCompletedMatches(), tournaments = useActiveTournaments();
   const myTeams = useMyTeams(profile?.id);
@@ -42,9 +44,9 @@ export default function HomeScreen() {
         <Pressable accessibilityLabel="Open profile" onPress={() => router.navigate('/(tabs)/profile')} style={s.avatar}>{profile?.avatar_url ? <Image source={{ uri: profile.avatar_url }} style={s.avatarImage} /> : <Text style={s.avatarText}>{initials(profile?.full_name)}</Text>}</Pressable>
       </View>
       <Text style={s.greeting}><Text>Good to see you</Text>, {profile?.full_name?.split(' ')[0] || 'Captain'}.</Text>
-      <LinearGradient colors={['#123D2B','#1D563B']} style={s.hero}>
+      <LinearGradient colors={[colors.forest,colors.orangeDark]} style={s.hero}>
         <View style={s.heroCopy}><View style={s.tag}><View style={s.dot}/><Text style={s.tagText}>BIG DREAMS. LOCAL GROUNDS.</Text></View><Text style={s.heroTitle}>Your ground.{'\n'}Your game.</Text><Text style={s.heroSub}>Bring your people together.{'\n'}Make every ball count.</Text><Pressable style={s.heroButton} onPress={() => router.push('/tournament/create')}><Text style={s.heroButtonText}>Create tournament</Text><Ionicons name="arrow-forward" color={colors.forest} size={18}/></Pressable></View>
-        <View pointerEvents="none" style={s.field}><Svg width="155" height="220" viewBox="0 0 155 220"><Ellipse cx="78" cy="110" rx="72" ry="99" fill="#286046" stroke="#86B475" strokeWidth="1"/><Ellipse cx="78" cy="110" rx="52" ry="73" fill="none" stroke="#8FBF85" strokeDasharray="4 5"/><Rect x="66" y="75" width="24" height="68" rx="3" fill="#B8CB86"/><Line x1="62" y1="88" x2="94" y2="88" stroke="#fff"/><Line x1="62" y1="130" x2="94" y2="130" stroke="#fff"/>{[[40,48],[110,64],[30,130],[118,158],[70,188]].map(([cx,cy],i)=><Circle key={i} cx={cx} cy={cy} r="4" fill="#D6F57A"/>)}</Svg></View>
+        <View pointerEvents="none" style={s.field}><Svg width="155" height="220" viewBox="0 0 155 220"><Ellipse cx="78" cy="110" rx="72" ry="99" fill={colors.orange} stroke="#86B475" strokeWidth="1"/><Ellipse cx="78" cy="110" rx="52" ry="73" fill="none" stroke="#8FBF85" strokeDasharray="4 5"/><Rect x="66" y="75" width="24" height="68" rx="3" fill="#B8CB86"/><Line x1="62" y1="88" x2="94" y2="88" stroke="#fff"/><Line x1="62" y1="130" x2="94" y2="130" stroke="#fff"/>{[[40,48],[110,64],[30,130],[118,158],[70,188]].map(([cx,cy],i)=><Circle key={i} cx={cx} cy={cy} r="4" fill={colors.lime}/>)}</Svg></View>
       </LinearGradient>
       <Pressable accessibilityLabel="Play Gully Sixes" style={s.arcade} onPress={() => router.push('/play')}>
         <View style={s.arcadeField}><View style={s.arcadeCrease}/><View style={s.arcadeBall}/></View>

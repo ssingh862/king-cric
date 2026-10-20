@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { useRef, useState } from "react";
@@ -42,6 +43,7 @@ export function PlayerPickerModal({
   onClose,
   required,
 }: PlayerPickerModalProps) {
+ useBranding(s=>s.palette);
   const insets = useSafeAreaInsets();
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -159,6 +161,7 @@ function PlayerCard({
   disabled?: boolean;
   onPress: () => void;
 }) {
+ useBranding(s=>s.palette);
   const initial = player.full_name.charAt(0).toUpperCase();
 
   return (

@@ -1,3 +1,4 @@
+import { useBranding } from '../../../src/stores/brandingStore';
 import { createThemedStyles } from '../../../src/lib/theme';
 import { Text } from '../../../src/i18n';
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +29,7 @@ import { isApiConfigured } from "../../../src/lib/api";
 import type { Innings, Player, ScoreEvent } from "../../../src/types/database";
 
 export default function MatchScorecardScreen() {
+ useBranding(s=>s.palette);
   const { matchId, innings: inningsParam } = useLocalSearchParams<{
     matchId: string;
     innings?: string;

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { Alert, TextInput } from '../../i18n';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
@@ -8,6 +9,7 @@ import type { ScoreEvent } from '../../types/database';
 import { colors } from '../../lib/theme';
 import { apiSafe } from '../../lib/api';
 export function DeliveryHistory({events,onChanged,onUndo,disabled}:{events:ScoreEvent[];onChanged:()=>Promise<void>;onUndo:()=>Promise<{error:string|null}>;disabled?:boolean}) {
+ useBranding(s=>s.palette);
  const [open,setOpen]=useState(false),[editing,setEditing]=useState<ScoreEvent|null>(null),[runs,setRuns]=useState('0'),[extras,setExtras]=useState('0'),[busy,setBusy]=useState(false);
  const last=events.at(-1);
  const undo=()=>Alert.alert('Undo last delivery?','The score, extras and wickets will be recalculated. You can enter the correct delivery again.',[{text:'Keep',style:'cancel'},{text:'Undo delivery',style:'destructive',onPress:async()=>{setBusy(true);const {error}=await onUndo();setBusy(false);if(error)Alert.alert('Could not undo',error);}}]);

@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { Alert } from '../../i18n';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
@@ -15,6 +16,7 @@ interface CurrentOverPanelProps {
 }
 
 export function CurrentOverPanel({ events, onUndoLast, disabled }: CurrentOverPanelProps) {
+ useBranding(s=>s.palette);
   const overBalls = getBallsInCurrentOver(events);
   if (!overBalls.length) return null;
 

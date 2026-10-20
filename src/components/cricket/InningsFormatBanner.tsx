@@ -1,3 +1,4 @@
+import { useBranding } from '../../stores/brandingStore';
 import { createThemedStyles } from '../../lib/theme';
 import { Text } from '../../i18n';
 import { StyleSheet,  View } from 'react-native';
@@ -12,6 +13,7 @@ interface InningsFormatBannerProps {
 }
 
 export function InningsFormatBanner({ rules, legalBalls }: InningsFormatBannerProps) {
+ useBranding(s=>s.palette);
   const maxBalls = maxLegalBalls(rules);
   const ballsLeft = Math.max(0, maxBalls - legalBalls);
   const oversLeft = formatOvers(ballsLeft, rules.ballsPerOver);
