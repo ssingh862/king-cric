@@ -1,0 +1,190 @@
+import { useBranding } from '../../src/stores/brandingStore';
+import { useState } from 'react';
+import { createThemedStyles } from '../../src/lib/theme';
+import { Text } from '../../src/i18n';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { GlassCard } from '../../src/components/ui/GlassCard';
+import { GradientButton } from '../../src/components/ui/GradientButton';
+import { useTeam } from '../../src/hooks/useTournaments';
+import { canManageTournament } from '../../src/lib/permissions';
+import { apiSafe, isApiConfigured } from '../../src/lib/api';
+import { colors } from '../../src/lib/theme';
+import type { Player, Tournament } from '../../src/types/database';
+import { useAuthStore } from '../../src/stores/authStore';
+import { squadLockMessage } from '../../src/lib/squadLock';
+
+async function pickPlayerPhoto(playerId: string, refetch: () => Promise<unknown>) {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.4, base64: true });
+  if (result.canceled || !result.assets[0]?.base64 || result.assets[0].base64.length > 850000) return;
+  await apiSafe(`/players/${playerId}`, { method: 'PATCH', body: JSON.stringify({ photo_url: `data:image/jpeg;base64,${result.assets[0].base64}` }) });
+  await refetch();
+}
+
+export default function TeamScreen() {
+ useBranding(s=>s.palette);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const profile = useAuthStore((s) => s.profile);
+  const { data: team, isLoading, refetch } = useTeam(id ?? '');
+
+  const [reuseError,setReuseError]=useState('');
+  const [reusing,setReusing]=useState(false);
+  async function reuse(){setReusing(true);try{const {data,error}=await apiSafe<{id:string}>(`/clubs/import/${id}`,{method:'POST'});if(error)setReuseError(error);else if(data)router.push(`/clubs/${data.id}` as never);}finally{setReusing(false);}}
+  const tournament = team?.tournament as Tournament | undefined;
+  const squadLocked = Boolean((team as { squad_locked?: boolean } | undefined)?.squad_locked);
+  const lockReason = (team as { squad_lock_reason?: 'status' | 'match' | null } | undefined)?.squad_lock_reason;
+  const canEditSquad =
+    canManageTournament(tournament ?? null, profile) || (team?.captain_id === profile?.id && !squadLocked);
+
+  const players = (team?.players as Player[] | undefined) ?? [];
+
+  if (isLoading && isApiConfigured() && !team) {
+    return (
+      <View style={[styles.root, styles.center]}>
+        <ActivityIndicator color={colors.orange} />
+      </View>
+    );
+  }
+
+  const t = team ?? {
+    name: 'Team',
+    short_name: 'TM',
+    primary_color: colors.orange,
+    tournament: { name: '' },
+  };
+
+  return (
+    <View style={styles.root}>
+      <View style={[styles.headerAccent, { backgroundColor: t.primary_color ?? colors.orange }]} />
+      <SafeAreaView style={styles.flex}>
+        <View style={styles.topBar}>
+          <Pressable onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </Pressable>
+          {canEditSquad ? (
+            <Pressable
+              style={styles.editBtn}
+              onPress={() => router.push({ pathname: '/team/edit', params: { id: id ?? '' } })}
+            >
+              <Ionicons name="create-outline" size={20} color={colors.orange} />
+              <Text style={styles.editText}>Edit</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 56 }} />
+          )}
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scroll}>
+          {team?.captain_id===profile?.id?<GradientButton title="Reuse this team" loading={reusing} onPress={()=>void reuse()} style={{marginBottom:16}}/>:null}
+          {reuseError?<Text accessibilityRole="alert">{reuseError}</Text>:null}
+          <View style={styles.teamHeader}>
+            <View style={[styles.logo, { backgroundColor: t.primary_color ?? colors.orange }]}>
+              <Text style={styles.logoText}>{t.short_name ?? t.name?.slice(0, 3)}</Text>
+            </View>
+            <Text style={styles.name}>{t.name}</Text>
+            <Text style={styles.tournament}>{t.tournament?.name}</Text>
+          </View>
+
+          <Text style={styles.section}>Squad ({players.length})</Text>
+          {canEditSquad ? <Text style={styles.empty}>Tap a player for stats. Hold a player to add a photo. Jersey numbers show when there is no photo.</Text> : null}
+          {squadLocked && team?.captain_id === profile?.id && !canManageTournament(tournament ?? null, profile) ? (
+            <GlassCard style={{ marginBottom: 12 }}>
+              <Text style={styles.empty}>{squadLockMessage(lockReason, tournament?.status)}</Text>
+            </GlassCard>
+          ) : null}
+          {players.length === 0 ? (
+            <GlassCard>
+              <Text style={styles.empty}>{canEditSquad ? 'No players yet. Tap Edit to add your squad.' : 'No players yet.'}</Text>
+            </GlassCard>
+          ) : (
+            players.map((p) => (
+              <Pressable
+                key={p.id}
+                onPress={() => router.push(`/player/${p.id}`)}
+                onLongPress={canEditSquad ? () => void pickPlayerPhoto(p.id, refetch) : undefined}
+              >
+                <GlassCard style={{ marginBottom: 8 }}>
+                  <View style={styles.playerRow}>
+                    {p.photo_url ? <Image source={{ uri: p.photo_url }} style={styles.photo} /> : <View style={styles.jersey}>
+                      <Text style={styles.jerseyNum}>{p.jersey_number ?? '—'}</Text>
+                    </View>}
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName}>
+                        {p.full_name}
+                        {p.is_captain ? ' (C)' : ''}
+                        {p.is_wicket_keeper ? ' (WK)' : ''}
+                      </Text>
+                      <Text style={styles.playerRole}>{p.role?.replace(/_/g, ' ')}</Text>
+                    </View>
+                    {canEditSquad ? <Ionicons name="pencil" size={16} color={colors.textDim} /> : null}
+                  </View>
+                </GlassCard>
+              </Pressable>
+            ))
+          )}
+
+          {canEditSquad ? (
+            <GradientButton
+              title="Edit team & players"
+              onPress={() => router.push({ pathname: '/team/edit', params: { id: id ?? '' } })}
+              style={{ marginTop: 20 }}
+            />
+          ) : null}
+          <GradientButton
+            title="Refresh"
+            onPress={() => refetch()}
+            variant="outline"
+            style={{ marginTop: 12 }}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = createThemedStyles({
+  root: { flex: 1, backgroundColor: colors.background },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  headerAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 120, opacity: 0.12 },
+  flex: { flex: 1 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  editText: { color: colors.orange, fontWeight: '600' },
+  scroll: { padding: 20, paddingBottom: 40 },
+  teamHeader: { alignItems: 'center', marginBottom: 28 },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoText: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  name: { color: colors.text, fontSize: 26, fontWeight: '800', marginTop: 16 },
+  tournament: { color: colors.textMuted, marginTop: 4 },
+  section: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  empty: { color: colors.textMuted, textAlign: 'center' },
+  playerRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  photo: { width: 40, height: 40, borderRadius: 20 },
+  jersey: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jerseyNum: { color: colors.orange, fontWeight: '800' },
+  playerInfo: { flex: 1 },
+  playerName: { color: colors.text, fontWeight: '600' },
+  playerRole: { color: colors.textMuted, fontSize: 12, marginTop: 2, textTransform: 'capitalize' },
+});

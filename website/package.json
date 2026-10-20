@@ -1,0 +1,1 @@
+{"name":"kingcric-website","private":true,"engines":{"node":"22.x"},"scripts":{"build":"node build.mjs","setup":"npm ci --prefix application --include=dev","typecheck":"node application/node_modules/typescript/bin/tsc --noEmit --project application/tsconfig.json"}}

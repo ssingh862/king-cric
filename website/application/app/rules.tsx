@@ -1,0 +1,20 @@
+import { useBranding } from '../src/stores/brandingStore';
+import { createThemedStyles } from '../src/lib/theme';
+import { Text } from '../src/i18n';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Linking, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../src/lib/theme';
+const sections = [
+ ['01','Overs & the innings','Six valid balls complete an over. Wides and no-balls normally do not count. The innings ends at the over limit, all out, or when the chasing side reaches its target.'],
+ ['02','Wides & no-balls','Standard penalty: one run. No-ball takes precedence over wide. Runs off the bat on a no-ball go to the batter. Automatic penalty runs do not change strike. Local penalty and rebowl settings are chosen before the toss.'],
+ ['03','Byes & leg-byes','Byes and leg-byes add to the team’s extras, not the batter or bowler. A leg-bye requires the umpire’s judgement about an attempted shot or avoidance.'],
+ ['04','Wickets & free hits','Bowled, caught, LBW, stumped and hit wicket credit the bowler. Run outs do not. The scorer must follow the umpire’s decision. No-ball/free-hit dismissals supported here are run out and obstructing the field.'],
+ ['05','Strike & new batters','Odd completed runs swap ends; the over ending swaps them again. After a catch, the incoming batter takes the dismissed striker’s end. Standard all out is squad size minus one; last-batter-standing is an optional local variation.'],
+ ['06','Corrections & ownership','Only the organizer can score or change a match. Edit the latest delivery’s runs, or undo it and enter the correct outcome. Undo later deliveries first when correcting older history. First-innings corrections lock after the chase starts.'],
+ ['07','Playing conditions','This app scores local limited-overs matches. Physical umpiring decisions, rain-adjusted DLS targets, penalty awards, retired-hurt returns and multi-innings/Test formats are not automated. Agree tournament playing conditions before play.'],
+];
+export default function RulesScreen(){
+ useBranding(s=>s.palette);return <SafeAreaView style={s.root}><View style={s.header}><Pressable accessibilityLabel="Back" onPress={()=>router.back()}><Ionicons name="arrow-back" size={24} color={colors.text}/></Pressable><Text style={s.title}>The cricket handbook</Text></View><ScrollView contentContainerStyle={{padding:20,paddingBottom:40}}><View style={s.hero}><Ionicons name="book-outline" size={32} color={colors.lime}/><Text style={s.heroTitle}>Play fair. Score it right.</Text><Text style={s.heroSub}>Scoring essentials for your local ground. The umpire makes the call.</Text></View>{sections.map(([n,title,body])=><View key={n} style={s.row}><Text style={s.number}>{n}</Text><View style={{flex:1}}><Text style={s.heading}>{title}</Text><Text style={s.body}>{body}</Text></View></View>)}<Pressable style={s.link} onPress={()=>Linking.openURL('https://lawsofcricket.lords.org/')}><Text style={{color:colors.orange,fontWeight:'700'}}>Read the complete MCC Laws</Text><Ionicons name="open-outline" color={colors.orange} size={18}/></Pressable></ScrollView></SafeAreaView>}
+const s=createThemedStyles({root:{flex:1,backgroundColor:colors.background},header:{flexDirection:'row',gap:16,padding:20,alignItems:'center'},title:{fontWeight:'800',fontSize:18,color:colors.text},hero:{backgroundColor:colors.forest,borderRadius:24,padding:24,marginBottom:20},heroTitle:{color:'#fff',fontSize:26,fontWeight:'800',marginTop:18},heroSub:{color:'#C9DCCE',lineHeight:21,marginTop:10},row:{flexDirection:'row',gap:16,paddingVertical:18,borderBottomWidth:1,borderBottomColor:colors.cardBorder},number:{fontSize:12,fontWeight:'800',color:colors.orange,paddingTop:3},heading:{fontWeight:'800',color:colors.text,fontSize:16},body:{color:colors.textMuted,fontSize:13,lineHeight:21,marginTop:7},link:{flexDirection:'row',gap:12,alignItems:'center',paddingVertical:24}});

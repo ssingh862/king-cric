@@ -1,0 +1,97 @@
+import { ScreenHeader } from '../src/components/ui/ScreenHeader';
+import { useBranding } from '../src/stores/brandingStore';
+import { createThemedStyles } from '../src/lib/theme';
+import { Text } from '../src/i18n';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet,  View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { GlassCard } from '../src/components/ui/GlassCard';
+import { GradientButton } from '../src/components/ui/GradientButton';
+import { useMyTeams } from '../src/hooks/useTournaments';
+import { isApiConfigured } from '../src/lib/api';
+import { colors, radius } from '../src/lib/theme';
+import { useAuthStore } from '../src/stores/authStore';
+
+export default function MyTeamsScreen() {
+ useBranding(s=>s.palette);
+  const { profile } = useAuthStore();
+  const { data: teams, isLoading } = useMyTeams(profile?.id);
+
+  const configured = isApiConfigured();
+
+  return (
+    <View style={styles.root}>
+      <SafeAreaView style={styles.flex} edges={['top']}>
+        <View style={{paddingHorizontal:20}}><ScreenHeader title="My teams" subtitle="Build your playing squad" back/></View>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <GradientButton title="Create team" onPress={()=>router.push('/clubs' as never)} style={{marginBottom:12}}/>
+          <GradientButton title="Invitations" variant="outline" onPress={()=>router.push('/invitations' as never)} style={{marginBottom:20}}/>
+          <Text style={styles.teamName}>Tournament squads</Text>
+          {!configured ? (
+            <GlassCard>
+              <Text style={styles.body}>
+                Connect Supabase in your environment to load teams you captain or registered.
+              </Text>
+            </GlassCard>
+          ) : isLoading ? (
+            <ActivityIndicator color={colors.orange} style={{ marginTop: 32 }} />
+          ) : teams?.length ? (
+            teams.map((t) => {
+              const tour = t.tournament as { name?: string; city?: string | null } | null | undefined;
+              return (
+                <Pressable key={t.id} onPress={() => router.push(`/team/${t.id}`)}>
+                  <GlassCard style={styles.card}>
+                    <View style={styles.row}>
+                      <View style={[styles.dot, { backgroundColor: t.primary_color ?? colors.orange }]} />
+                      <View style={styles.info}>
+                        <Text style={styles.teamName}>{t.name}</Text>
+                        <Text style={styles.meta} numberOfLines={1}>
+                          {tour?.name ?? 'Tournament'}{tour?.city ? ` · ${tour.city}` : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
+                    </View>
+                  </GlassCard>
+                </Pressable>
+              );
+            })
+          ) : (
+            <GlassCard>
+              <Text style={styles.body}>
+                You have not created a team yet. Tap Create team, enter the team name and city, then add players. A tournament organizer invites that team; accept the invite under Invitations.
+              </Text>
+              <GradientButton
+                title="Create team"
+                onPress={() => router.push('/clubs' as never)}
+                style={{ marginTop: 16 }}
+              />
+            </GlassCard>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = createThemedStyles({
+  root: { flex: 1, backgroundColor: colors.background },
+  header: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
+  flex: { flex: 1 },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  title: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  scroll: { padding: 20, paddingBottom: 40 },
+  card: { marginBottom: 12, borderRadius: radius.lg },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  info: { flex: 1 },
+  teamName: { color: colors.text, fontSize: 17, fontWeight: '700' },
+  meta: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
+  body: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
+});

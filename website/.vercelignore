@@ -1,0 +1,8 @@
+.git
+.openai
+node_modules
+application/node_modules
+application/.expo
+dist
+.env*
+application/.env*
