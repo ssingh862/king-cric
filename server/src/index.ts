@@ -1,3 +1,4 @@
+import { createAppearanceRouter } from './routes/appearance';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
@@ -37,6 +38,7 @@ async function main() {
     });
   });
 
+  app.use('/appearance', createAppearanceRouter(io));
   app.use('/auth', authRoutes);
   app.use('/clubs', clubRoutes);
   app.use('/settings', settingsRoutes);
