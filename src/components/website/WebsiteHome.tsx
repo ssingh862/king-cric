@@ -6,7 +6,7 @@ import { getSocket, joinInningsRoom, leaveInningsRoom } from '../../lib/socket';
 import { useAuthStore } from '../../stores/authStore';
 import { websiteCss } from './styles';
 import LanguageSelector, { useWebsiteTranslation } from './LanguageSelector';
-const APK='https://expo.dev/artifacts/eas/0exV4loEHHbMOdvH3gKo2sddYjPErvmS3DKMizXC2qw.apk';
+const APK='https://github.com/ssingh862/king-cric/releases/download/android-1.1.0-build-2/KingCric.apk';
 type LiveMatch={id:string;team_a?:{name:string;short_name?:string};team_b?:{name:string;short_name?:string};tournament?:{name:string};venue?:string;innings?:Array<{id:string;total_runs:number;total_wickets:number;total_overs:number;batting_team_id:string}>;team_a_id:string};
 type League={id:string;name:string;city?:string;format?:string;status:string;overs_per_innings:number;ball_type:string};
 export default function WebsiteHome(){
